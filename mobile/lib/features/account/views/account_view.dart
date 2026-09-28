@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../friends/views/friends_view.dart';
@@ -33,6 +34,8 @@ class AccountView extends GetView<SocialController> {
               ),
               const SizedBox(height: AppSpacing.sm),
               _statsGrid(),
+              const SizedBox(height: AppSpacing.xl),
+              _dataAttribution(),
             ],
           ),
         ),
@@ -137,6 +140,52 @@ class AccountView extends GetView<SocialController> {
       ),
     );
   }
+
+  /// Required by TMDB's API terms: their logo plus the "not endorsed" notice.
+  Widget _dataAttribution() => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(AppSpacing.md),
+    decoration: BoxDecoration(
+      color: AppColors.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      border: Border.all(color: AppColors.outline),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Veri Kaynağı',
+          style: AppTextStyles.labelSm.copyWith(
+            color: AppColors.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        SvgPicture.asset(
+          'assets/attribution/tmdb_logo.svg',
+          height: 14,
+          semanticsLabel: 'The Movie Database (TMDB)',
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          'Film ve dizi bilgileri, afişler ve fragmanlar TMDB API\'si '
+          'kullanılarak sağlanmaktadır. Bu uygulama TMDB tarafından '
+          'onaylanmamış veya sertifikalandırılmamıştır.',
+          style: AppTextStyles.bodyMd.copyWith(
+            fontSize: 12,
+            color: AppColors.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'This product uses the TMDB API but is not endorsed or certified by TMDB.',
+          style: AppTextStyles.labelSm.copyWith(
+            fontSize: 10,
+            color: AppColors.onSurfaceVariant.withValues(alpha: 0.7),
+          ),
+        ),
+      ],
+    ),
+  );
 
   Widget _statCard({
     required IconData icon,
