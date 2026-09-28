@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../../../core/likes/likes_controller.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/star_rating.dart';
 import '../../../data/models/comment_model.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/models/person_model.dart';
@@ -199,6 +200,35 @@ class DetailView extends GetView<DetailController> {
                         ),
                       ),
                     ],
+                  ),
+                  Obx(
+                    () => AnimatedSize(
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeOut,
+                      child:
+                          controller.savedStatus.value == LibraryStatus.watched
+                          ? Padding(
+                              padding: const EdgeInsets.only(
+                                top: AppSpacing.sm,
+                              ),
+                              child: Row(
+                                children: [
+                                  Text(
+                                    'Puanın',
+                                    style: AppTextStyles.labelSm.copyWith(
+                                      color: AppColors.onSurfaceVariant,
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppSpacing.xs),
+                                  StarRatingInput(
+                                    rating: controller.rating.value,
+                                    onChanged: controller.setRating,
+                                  ),
+                                ],
+                              ),
+                            )
+                          : const SizedBox(width: double.infinity),
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   Obx(() {

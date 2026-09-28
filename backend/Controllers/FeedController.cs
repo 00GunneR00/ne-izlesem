@@ -36,10 +36,19 @@ public class FeedController(AppDbContext db, TitleMapper mapper) : ControllerBas
             .Take(limit)
             .ToListAsync(ct);
 
+        var ratingEntities = await db.LibraryEntries
+            .Include(e => e.User)
+            .Include(e => e.Title)
+            .Where(e => friendIds.Contains(e.UserId) && e.Rating != null && e.RatedAt != null)
+            .OrderByDescending(e => e.RatedAt)
+            .Take(limit)
+            .ToListAsync(ct);
+
         var likes = likeEntities.Select(l => new FeedItemDto("Like", l.UserId, l.User!.DisplayName, mapper.ToDto(l.Title!), null, l.LikedAt));
         var comments = commentEntities.Select(c => new FeedItemDto("Comment", c.UserId, c.User!.DisplayName, mapper.ToDto(c.Title!), c.Text, c.CreatedAt));
+        var ratings = ratingEntities.Select(e => new FeedItemDto("Rating", e.UserId, e.User!.DisplayName, mapper.ToDto(e.Title!), null, e.RatedAt!.Value, e.Rating));
 
-        return likes.Concat(comments)
+        return likes.Concat(comments).Concat(ratings)
             .OrderByDescending(f => f.CreatedAt)
             .Take(limit)
             .ToList();

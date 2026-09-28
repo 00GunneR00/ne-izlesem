@@ -1,3 +1,4 @@
 namespace Neizlesem.Api.DTOs;
 
-public record FeedItemDto(string Type, int UserId, string UserDisplayName, TitleDto Title, string? Text, DateTime CreatedAt);
+/// <summary>Type is "Like", "Comment" or "Rating" (then <see cref="Rating"/> is set).</summary>
+public record FeedItemDto(string Type, int UserId, string UserDisplayName, TitleDto Title, string? Text, DateTime CreatedAt, int? Rating = null);

@@ -86,4 +86,13 @@ class LibraryService {
   }
 
   Future<void> remove(int entryId) => _dio.delete('/library/$entryId');
+
+  /// 1–5 stars, or null to clear. Only allowed on watched entries.
+  Future<LibraryEntryModel> setRating(int entryId, int userId, int? rating) async {
+    final response = await _dio.put(
+      '/library/$entryId/rating',
+      data: {'userId': userId, 'rating': rating},
+    );
+    return LibraryEntryModel.fromJson(response.data);
+  }
 }

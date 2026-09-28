@@ -7,7 +7,8 @@ public record LibraryEntryDto(
     int UserId,
     TitleDto Title,
     LibraryStatus Status,
-    DateTime AddedAt);
+    DateTime AddedAt,
+    int? Rating);
 
 public record CreateLibraryEntryRequest(
     int UserId,
@@ -22,3 +23,6 @@ public record SwipeRequest(
     int TmdbId,
     MediaType MediaType,
     SwipeDirection Direction);
+
+/// <summary><see cref="Rating"/> 1–5, or null to clear it.</summary>
+public record SetRatingRequest(int UserId, int? Rating);

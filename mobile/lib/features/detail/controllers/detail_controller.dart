@@ -25,6 +25,8 @@ class DetailController extends GetxController {
   final RxBool isSaving = false.obs;
   final RxBool isPostingComment = false.obs;
   final Rxn<LibraryStatus> savedStatus = Rxn<LibraryStatus>();
+  final Rxn<int> rating = Rxn<int>();
+  final RxBool isRating = false.obs;
   int? _entryId;
 
   /// Status before the last change on this screen, so undoing "İzledim" on
@@ -108,6 +110,7 @@ class DetailController extends GetxController {
       if (isSaving.value) return;
       _entryId = entry?.id;
       savedStatus.value = entry?.status;
+      rating.value = entry?.rating;
     } catch (_) {
       // Buttons just start unselected; saving still works.
     }
@@ -122,12 +125,14 @@ class DetailController extends GetxController {
       if (savedStatus.value == status && _entryId != null) {
         final restore = _previousStatus;
         if (restore != null && restore != status) {
-          await _libraryService.updateStatus(_entryId!, restore);
+          final entry = await _libraryService.updateStatus(_entryId!, restore);
           savedStatus.value = restore;
+          rating.value = entry.rating;
         } else {
           await _libraryService.remove(_entryId!);
           _entryId = null;
           savedStatus.value = null;
+          rating.value = null;
         }
         _previousStatus = null;
         return;
@@ -142,10 +147,30 @@ class DetailController extends GetxController {
       _previousStatus = savedStatus.value;
       _entryId = entry.id;
       savedStatus.value = status;
+      // The backend drops the rating when an entry leaves "İzledim".
+      rating.value = entry.rating;
     } catch (_) {
       Get.snackbar('Olmadı', 'Kütüphane güncellenemedi, tekrar dene.');
     } finally {
       isSaving.value = false;
+    }
+  }
+
+  /// Stars only show once watched; tapping the current value clears it.
+  Future<void> setRating(int? value) async {
+    final userId = _session.userId.value;
+    final entryId = _entryId;
+    if (userId == null || entryId == null || isRating.value) return;
+    final before = rating.value;
+    rating.value = value; // optimistic — stars respond instantly
+    isRating.value = true;
+    try {
+      await _libraryService.setRating(entryId, userId, value);
+    } catch (_) {
+      rating.value = before;
+      Get.snackbar('Olmadı', 'Puanın kaydedilemedi, tekrar dene.');
+    } finally {
+      isRating.value = false;
     }
   }
 }

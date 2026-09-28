@@ -8,12 +8,16 @@ class LibraryEntryModel {
   final LibraryStatus status;
   final DateTime addedAt;
 
+  /// Personal 1–5 stars; null when not rated.
+  final int? rating;
+
   LibraryEntryModel({
     required this.id,
     required this.userId,
     required this.title,
     required this.status,
     required this.addedAt,
+    this.rating,
   });
 
   factory LibraryEntryModel.fromJson(Map<String, dynamic> json) => LibraryEntryModel(
@@ -22,5 +26,6 @@ class LibraryEntryModel {
         title: TitleModel.fromJson(json['title'] as Map<String, dynamic>),
         status: LibraryStatus.fromApi(json['status'] as String),
         addedAt: DateTime.parse(json['addedAt'] as String),
+        rating: json['rating'] as int?,
       );
 }

@@ -9,4 +9,8 @@ public class LibraryEntry
     public Title? Title { get; set; }
     public LibraryStatus Status { get; set; }
     public DateTime AddedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>Personal 1–5 star rating; only meaningful once watched.</summary>
+    public int? Rating { get; set; }
+    public DateTime? RatedAt { get; set; }
 }

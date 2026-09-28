@@ -1,12 +1,13 @@
 import 'title_model.dart';
 
 class FeedItemModel {
-  final String type; // "Like" | "Comment"
+  final String type; // "Like" | "Comment" | "Rating"
   final int userId;
   final String userDisplayName;
   final TitleModel title;
   final String? text;
   final DateTime createdAt;
+  final int? rating;
 
   FeedItemModel({
     required this.type,
@@ -15,9 +16,11 @@ class FeedItemModel {
     required this.title,
     this.text,
     required this.createdAt,
+    this.rating,
   });
 
   bool get isComment => type == 'Comment';
+  bool get isRating => type == 'Rating';
 
   factory FeedItemModel.fromJson(Map<String, dynamic> json) => FeedItemModel(
         type: json['type'] as String,
@@ -26,5 +29,6 @@ class FeedItemModel {
         title: TitleModel.fromJson(json['title'] as Map<String, dynamic>),
         text: json['text'] as String?,
         createdAt: DateTime.parse(json['createdAt'] as String),
+        rating: json['rating'] as int?,
       );
 }

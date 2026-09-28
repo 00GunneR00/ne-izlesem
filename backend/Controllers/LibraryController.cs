@@ -73,7 +73,7 @@ public class LibraryController(AppDbContext db, TitleCacheService titleCache, Ti
             .FirstOrDefaultAsync(e => e.UserId == request.UserId && e.TitleId == title.Id, ct);
         if (existing is not null)
         {
-            existing.Status = request.Status;
+            SetStatus(existing, request.Status);
             await db.SaveChangesAsync(ct);
             return ToDto(existing);
         }
@@ -99,7 +99,7 @@ public class LibraryController(AppDbContext db, TitleCacheService titleCache, Ti
             return NotFound();
         }
 
-        entry.Status = request.Status;
+        SetStatus(entry, request.Status);
         await db.SaveChangesAsync(ct);
         return ToDto(entry);
     }
@@ -118,5 +118,41 @@ public class LibraryController(AppDbContext db, TitleCacheService titleCache, Ti
         return NoContent();
     }
 
-    private LibraryEntryDto ToDto(LibraryEntry e) => new(e.Id, e.UserId, mapper.ToDto(e.Title!), e.Status, e.AddedAt);
+    [HttpPut("{id:int}/rating")]
+    public async Task<ActionResult<LibraryEntryDto>> SetRating(int id, SetRatingRequest request, CancellationToken ct)
+    {
+        if (request.Rating is < 1 or > 5)
+        {
+            return BadRequest("Puan 1 ile 5 arasında olmalı.");
+        }
+
+        var entry = await db.LibraryEntries.Include(e => e.Title)
+            .FirstOrDefaultAsync(e => e.Id == id && e.UserId == request.UserId, ct);
+        if (entry is null)
+        {
+            return NotFound();
+        }
+        if (request.Rating is not null && entry.Status != LibraryStatus.Watched)
+        {
+            return BadRequest("Sadece izlediğin içerikleri puanlayabilirsin.");
+        }
+
+        entry.Rating = request.Rating;
+        entry.RatedAt = request.Rating is null ? null : DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+        return ToDto(entry);
+    }
+
+    /// <summary>A rating only makes sense for something watched — moving back to "İzleyeceğim" drops it.</summary>
+    private static void SetStatus(LibraryEntry entry, LibraryStatus status)
+    {
+        entry.Status = status;
+        if (status != LibraryStatus.Watched)
+        {
+            entry.Rating = null;
+            entry.RatedAt = null;
+        }
+    }
+
+    private LibraryEntryDto ToDto(LibraryEntry e) => new(e.Id, e.UserId, mapper.ToDto(e.Title!), e.Status, e.AddedAt, e.Rating);
 }

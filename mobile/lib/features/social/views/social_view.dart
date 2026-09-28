@@ -11,6 +11,7 @@ import '../../../data/models/title_model.dart';
 import '../../account/widgets/app_drawer.dart';
 import '../../groups/views/group_detail_view.dart';
 import '../controllers/social_controller.dart';
+import '../../../core/widgets/star_rating.dart';
 import '../widgets/animated_like_icon.dart';
 import '../widgets/notification_bell.dart';
 import '../widgets/suggest_dialog.dart';
@@ -356,7 +357,11 @@ class _FeedCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = Get.find<SocialController>();
     final title = item.title;
-    final actionLabel = item.isComment ? 'bir yorum yaptı' : 'bir film beğendi';
+    final actionLabel = item.isComment
+        ? 'bir yorum yaptı'
+        : item.isRating
+        ? '${item.rating} yıldız verdi'
+        : 'bir film beğendi';
 
     return Container(
       decoration: BoxDecoration(
@@ -402,10 +407,16 @@ class _FeedCard extends StatelessWidget {
                   ),
                 ),
                 Icon(
-                  item.isComment ? Icons.chat_bubble : Icons.favorite,
+                  item.isComment
+                      ? Icons.chat_bubble
+                      : item.isRating
+                      ? Icons.star
+                      : Icons.favorite,
                   size: 18,
                   color: item.isComment
                       ? AppColors.tertiary
+                      : item.isRating
+                      ? AppColors.primary
                       : AppColors.primaryContainer,
                 ),
               ],
@@ -458,6 +469,10 @@ class _FeedCard extends StatelessWidget {
                           ),
                         ],
                       ),
+                      if (item.isRating && item.rating != null) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        StarRatingDisplay(rating: item.rating!),
+                      ],
                       if (item.isComment && item.text != null) ...[
                         const SizedBox(height: AppSpacing.sm),
                         Text(
