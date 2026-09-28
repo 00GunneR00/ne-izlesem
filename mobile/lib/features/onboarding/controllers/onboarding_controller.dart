@@ -3,8 +3,10 @@ import '../../../core/routes/app_routes.dart';
 import '../../../core/session/session_service.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/models/genre_model.dart';
+import '../../../data/models/user_model.dart';
 import '../../../data/services/titles_service.dart';
 import '../../../data/services/user_service.dart';
+import '../../swipe/controllers/swipe_controller.dart';
 
 class OnboardingController extends GetxController {
   final TitlesService _titlesService = TitlesService();
@@ -18,6 +20,12 @@ class OnboardingController extends GetxController {
 
   static const minSelection = 3;
 
+  /// Opened from the profile ("Tür Tercihlerim") rather than after sign-up:
+  /// pre-selects the saved genres and returns to the previous screen on save.
+  /// Pass `arguments: {'edit': true}` when navigating.
+  late final bool isEditing =
+      Get.arguments is Map && (Get.arguments as Map)['edit'] == true;
+
   @override
   void onInit() {
     super.onInit();
@@ -27,7 +35,15 @@ class OnboardingController extends GetxController {
   Future<void> _loadGenres() async {
     isLoading.value = true;
     try {
-      genres.value = await _titlesService.getGenres(MediaType.movie);
+      final userId = _session.userId.value;
+      final results = await Future.wait([
+        _titlesService.getGenres(MediaType.movie),
+        if (isEditing && userId != null) _userService.getById(userId),
+      ]);
+      genres.value = results[0] as List<GenreModel>;
+      if (results.length > 1) {
+        selectedGenreIds.addAll((results[1] as UserModel).preferredGenreIds);
+      }
     } finally {
       isLoading.value = false;
     }
@@ -60,7 +76,18 @@ class OnboardingController extends GetxController {
         await _session.setUserId(userId);
       }
       await _userService.updatePreferredGenres(userId, selectedGenreIds.toList());
-      Get.offAllNamed(AppRoutes.root);
+      if (isEditing) {
+        // New genres should show up in Swipe right away, not next launch.
+        if (Get.isRegistered<SwipeController>()) {
+          Get.find<SwipeController>().reload();
+        }
+        Get.back();
+        Get.snackbar('Kaydedildi', 'Tür tercihlerin güncellendi.');
+      } else {
+        Get.offAllNamed(AppRoutes.root);
+      }
+    } catch (_) {
+      Get.snackbar('Olmadı', 'Tercihlerin kaydedilemedi, tekrar dene.');
     } finally {
       isSubmitting.value = false;
     }

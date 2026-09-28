@@ -126,6 +126,11 @@ class SwipeController extends GetxController {
   void switchMediaType(MediaType type) {
     if (mediaType.value == type) return;
     mediaType.value = type;
+    reload();
+  }
+
+  /// Starts a fresh deck, e.g. after the user changed their preferred genres.
+  void reload() {
     _page = 1 + _random.nextInt(_maxStartPage);
     queue.clear();
     _seenKeys.clear();

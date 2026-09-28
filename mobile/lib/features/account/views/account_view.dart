@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
+import '../../../core/routes/app_routes.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../friends/views/friends_view.dart';
 import '../../groups/views/groups_view.dart';
@@ -34,6 +35,13 @@ class AccountView extends GetView<SocialController> {
               ),
               const SizedBox(height: AppSpacing.sm),
               _statsGrid(),
+              const SizedBox(height: AppSpacing.xl),
+              Text(
+                'Tercihler',
+                style: AppTextStyles.headlineMd.copyWith(fontSize: 18),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _genrePreferencesTile(),
               const SizedBox(height: AppSpacing.xl),
               _dataAttribution(),
             ],
@@ -140,6 +148,51 @@ class AccountView extends GetView<SocialController> {
       ),
     );
   }
+
+  /// Re-opens the onboarding genre picker in edit mode; Swipe picks the new
+  /// genres up immediately.
+  Widget _genrePreferencesTile() => InkWell(
+    borderRadius: BorderRadius.circular(AppRadius.lg),
+    onTap: () async {
+      await Get.toNamed(AppRoutes.onboarding, arguments: {'edit': true});
+      controller.refreshMe(); // so the genre count below updates
+    },
+    child: Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainer,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.outline),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.theater_comedy_outlined, color: AppColors.primary),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Tür Tercihlerim', style: AppTextStyles.bodyMd),
+                Obx(() {
+                  final count =
+                      controller.me.value?.preferredGenreIds.length ?? 0;
+                  return Text(
+                    count == 0
+                        ? 'Henüz seçilmedi — Swipe önerilerini kişiselleştir'
+                        : '$count tür seçili · Swipe bunlara göre öneriyor',
+                    style: AppTextStyles.labelSm.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right, color: AppColors.onSurfaceVariant),
+        ],
+      ),
+    ),
+  );
 
   /// Required by TMDB's API terms: their logo plus the "not endorsed" notice.
   Widget _dataAttribution() => Container(

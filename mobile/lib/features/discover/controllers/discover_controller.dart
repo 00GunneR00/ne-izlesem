@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:get/get.dart';
+import '../../../core/session/session_service.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/models/genre_model.dart';
 import '../../../data/models/title_model.dart';
@@ -7,6 +8,7 @@ import '../../../data/services/titles_service.dart';
 
 class DiscoverController extends GetxController {
   final TitlesService _titlesService = TitlesService();
+  final SessionService _session = Get.find();
   final Random _random = Random();
 
   final Rx<MediaType> mediaType = MediaType.movie.obs;
@@ -78,6 +80,9 @@ class DiscoverController extends GetxController {
             type,
             genreId: selectedGenreId.value,
             page: _page,
+            // Skip what's already watched/saved/swiped — across sessions,
+            // not just this one (that's what _seenKeys covers).
+            excludeHandledFor: _session.userId.value,
           );
           _page++;
           if (token != _loadToken) return;

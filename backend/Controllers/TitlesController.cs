@@ -1,13 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
 using Neizlesem.Api.DTOs;
 using Neizlesem.Api.Models;
+using Neizlesem.Api.Services;
 using Neizlesem.Api.Services.Tmdb;
 
 namespace Neizlesem.Api.Controllers;
 
 [ApiController]
 [Route("api/titles")]
-public class TitlesController(ITmdbService tmdb, TitleMapper mapper) : ControllerBase
+public class TitlesController(ITmdbService tmdb, TitleMapper mapper, SwipeDeckService deck) : ControllerBase
 {
     [HttpGet("genres")]
     public async Task<ActionResult<List<GenreDto>>> GetGenres([FromQuery] MediaType mediaType, CancellationToken ct)
@@ -24,13 +25,25 @@ public class TitlesController(ITmdbService tmdb, TitleMapper mapper) : Controlle
         return result.Results.Select(t => mapper.ToDto(t, mediaType)).ToList();
     }
 
+    /// <summary>
+    /// Popular titles. With <paramref name="userId"/>, titles that user already
+    /// swiped or has in their library are left out (Keşfet feed), so they
+    /// don't come back on every app open. A page may therefore come back
+    /// short or empty — the client just asks for the next one.
+    /// </summary>
     [HttpGet("discover")]
     public async Task<ActionResult<List<TitleDto>>> Discover(
         [FromQuery] MediaType mediaType, [FromQuery] int? genreId, [FromQuery] int page = 1,
-        [FromQuery] int? providerId = null, CancellationToken ct = default)
+        [FromQuery] int? providerId = null, [FromQuery] int? userId = null, CancellationToken ct = default)
     {
         var result = await tmdb.DiscoverAsync(mediaType, genreId.HasValue ? [genreId.Value] : null, page, providerId, ct);
-        return result.Results.Select(t => mapper.ToDto(t, mediaType)).ToList();
+        var handled = userId.HasValue
+            ? await deck.GetHandledTmdbIdsAsync(userId.Value, mediaType, ct)
+            : [];
+        return result.Results
+            .Where(t => !handled.Contains(t.Id))
+            .Select(t => mapper.ToDto(t, mediaType))
+            .ToList();
     }
 
     [HttpGet("search")]

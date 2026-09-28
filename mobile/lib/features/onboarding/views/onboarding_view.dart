@@ -19,6 +19,9 @@ class OnboardingView extends GetView<OnboardingController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: controller.isEditing
+          ? AppBar(title: const Text('Tür Tercihlerim'))
+          : null,
       body: SafeArea(
         child: Column(
           children: [
@@ -105,7 +108,7 @@ class OnboardingView extends GetView<OnboardingController> {
                               width: 20,
                               child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                             )
-                          : const Text('Devam Et'),
+                          : Text(controller.isEditing ? 'Kaydet' : 'Devam Et'),
                     ),
                   ),
                 )),

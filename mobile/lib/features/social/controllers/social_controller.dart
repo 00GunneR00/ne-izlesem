@@ -62,6 +62,13 @@ class SocialController extends GetxController {
     reload();
   }
 
+  /// Just the current user (e.g. after editing genre preferences).
+  Future<void> refreshMe() async {
+    final userId = _userId;
+    if (userId == null) return;
+    me.value = await _userService.getById(userId);
+  }
+
   Future<void> reload() async {
     final userId = _userId;
     isLoading.value = true;

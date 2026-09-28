@@ -28,11 +28,14 @@ class TitlesService {
     return (response.data as List).map((e) => TitleModel.fromJson(e)).toList();
   }
 
+  /// With [excludeHandledFor], titles that user already swiped or has in
+  /// their library are filtered out server-side (so a page can be short).
   Future<List<TitleModel>> discover(
     MediaType mediaType, {
     int? genreId,
     int page = 1,
     int? providerId,
+    int? excludeHandledFor,
   }) async {
     final response = await _dio.get(
       '/titles/discover',
@@ -40,6 +43,7 @@ class TitlesService {
         'mediaType': mediaType.apiValue,
         if (genreId != null) 'genreId': genreId,
         if (providerId != null) 'providerId': providerId,
+        if (excludeHandledFor != null) 'userId': excludeHandledFor,
         'page': page,
       },
     );
