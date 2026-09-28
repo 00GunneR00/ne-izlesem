@@ -102,6 +102,23 @@ class LibraryService {
     return LibraryEntryModel.fromJson(response.data);
   }
 
+  /// Logs the episode after the current one (rolling into the next season).
+  /// [finished] is true when that was the last aired episode. Throws (409)
+  /// when every aired episode is already logged.
+  Future<({LibraryEntryModel entry, bool finished})> nextEpisode(
+    int entryId,
+    int userId,
+  ) async {
+    final response = await _dio.post(
+      '/library/$entryId/next-episode',
+      queryParameters: {'userId': userId},
+    );
+    return (
+      entry: LibraryEntryModel.fromJson(response.data['entry']),
+      finished: response.data['finished'] as bool,
+    );
+  }
+
   /// 1–5 stars, or null to clear. Only allowed on watched entries.
   Future<LibraryEntryModel> setRating(int entryId, int userId, int? rating) async {
     final response = await _dio.put(

@@ -13,7 +13,9 @@ import '../../groups/views/group_detail_view.dart';
 import '../controllers/social_controller.dart';
 import '../../../core/widgets/spoiler_text.dart';
 import '../../../core/widgets/star_rating.dart';
+import '../../profile/controllers/profile_controller.dart';
 import '../widgets/animated_like_icon.dart';
+import '../widgets/library_sliver.dart';
 import '../widgets/notification_bell.dart';
 import '../widgets/suggest_dialog.dart';
 
@@ -46,44 +48,80 @@ class SocialView extends GetView<SocialController> {
       drawer: const AppDrawer(),
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: controller.reload,
-          child: CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(child: _topBar()),
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                sliver: SliverToBoxAdapter(
-                  child: Column(
-                    children: [
-                      const SizedBox(height: AppSpacing.md),
-                      _connectionsSection(),
-                      const SizedBox(height: AppSpacing.lg),
-                      _segmentedTabs(),
-                      const SizedBox(height: AppSpacing.lg),
-                    ],
+          onRefresh: () => controller.selectedTab.value == 2
+              ? Get.find<ProfileController>().refreshAll()
+              : controller.reload(),
+          child: NotificationListener<ScrollNotification>(
+            // Listem pages the library in as you near the bottom.
+            onNotification: (notification) {
+              if (controller.selectedTab.value == 2 &&
+                  notification.metrics.pixels >=
+                      notification.metrics.maxScrollExtent - 400) {
+                final profile = Get.find<ProfileController>();
+                profile.loadMore(profile.mainTab.value);
+              }
+              return false;
+            },
+            child: CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(child: _topBar()),
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                  ),
+                  sliver: SliverToBoxAdapter(
+                    child: Column(
+                      children: [
+                        const SizedBox(height: AppSpacing.md),
+                        _connectionsSection(),
+                        const SizedBox(height: AppSpacing.lg),
+                        _segmentedTabs(),
+                        const SizedBox(height: AppSpacing.lg),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              Obx(() {
-                if (controller.isLoading.value) {
-                  return const SliverFillRemaining(
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                }
-                if (controller.selectedTab.value == 0) {
-                  if (controller.feed.isEmpty) {
-                    return SliverFillRemaining(
-                      child: Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(AppSpacing.lg),
-                          child: Text(
-                            'Arkadaşlarından henüz bir hareket yok. Bir film beğen ya da yorum yaz, arkadaşların da paylaşınca burada görünsün.',
-                            textAlign: TextAlign.center,
-                            style: AppTextStyles.bodyMd.copyWith(
-                              color: AppColors.onSurfaceVariant,
+                Obx(() {
+                  // Listem has its own data (the library), independent of
+                  // the feed/trending loading state.
+                  if (controller.selectedTab.value == 2) {
+                    return librarySliver(Get.find<ProfileController>());
+                  }
+                  if (controller.isLoading.value) {
+                    return const SliverFillRemaining(
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  if (controller.selectedTab.value == 0) {
+                    if (controller.feed.isEmpty) {
+                      return SliverFillRemaining(
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(AppSpacing.lg),
+                            child: Text(
+                              'Arkadaşlarından henüz bir hareket yok. Bir film beğen ya da yorum yaz, arkadaşların da paylaşınca burada görünsün.',
+                              textAlign: TextAlign.center,
+                              style: AppTextStyles.bodyMd.copyWith(
+                                color: AppColors.onSurfaceVariant,
+                              ),
                             ),
                           ),
                         ),
+                      );
+                    }
+                    return SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.md,
+                        0,
+                        AppSpacing.md,
+                        AppSpacing.xl,
+                      ),
+                      sliver: SliverList.separated(
+                        itemCount: controller.feed.length,
+                        separatorBuilder: (_, _) =>
+                            const SizedBox(height: AppSpacing.md),
+                        itemBuilder: (context, index) =>
+                            _FeedCard(item: controller.feed[index]),
                       ),
                     );
                   }
@@ -95,31 +133,16 @@ class SocialView extends GetView<SocialController> {
                       AppSpacing.xl,
                     ),
                     sliver: SliverList.separated(
-                      itemCount: controller.feed.length,
+                      itemCount: controller.trending.length,
                       separatorBuilder: (_, _) =>
                           const SizedBox(height: AppSpacing.md),
                       itemBuilder: (context, index) =>
-                          _FeedCard(item: controller.feed[index]),
+                          _TrendingCard(title: controller.trending[index]),
                     ),
                   );
-                }
-                return SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.md,
-                    0,
-                    AppSpacing.md,
-                    AppSpacing.xl,
-                  ),
-                  sliver: SliverList.separated(
-                    itemCount: controller.trending.length,
-                    separatorBuilder: (_, _) =>
-                        const SizedBox(height: AppSpacing.md),
-                    itemBuilder: (context, index) =>
-                        _TrendingCard(title: controller.trending[index]),
-                  ),
-                );
-              }),
-            ],
+                }),
+              ],
+            ),
           ),
         ),
       ),
@@ -323,6 +346,7 @@ class SocialView extends GetView<SocialController> {
         children: [
           Expanded(child: _tabButton('Arkadaş Akışı', 0)),
           Expanded(child: _tabButton('Genel Trend', 1)),
+          Expanded(child: _tabButton('Listem', 2)),
         ],
       ),
     ),

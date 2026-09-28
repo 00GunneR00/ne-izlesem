@@ -31,3 +31,6 @@ public record SetRatingRequest(int UserId, int? Rating);
 
 /// <summary>Last watched episode of a show; episode 0 means "starting this season".</summary>
 public record SetProgressRequest(int UserId, int Season, int Episode);
+
+/// <summary><see cref="Finished"/> is true when the logged episode was the last aired one.</summary>
+public record NextEpisodeResultDto(LibraryEntryDto Entry, bool Finished);

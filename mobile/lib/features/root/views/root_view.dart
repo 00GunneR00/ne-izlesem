@@ -6,6 +6,7 @@ import '../../discover/views/discover_view.dart';
 import '../../search/views/search_view.dart';
 import '../../social/views/social_view.dart';
 import '../../swipe/views/swipe_view.dart';
+import '../../takip/views/takip_view.dart';
 import '../controllers/root_controller.dart';
 
 class RootView extends GetView<RootController> {
@@ -14,6 +15,7 @@ class RootView extends GetView<RootController> {
   static const _tabs = [
     (icon: Icons.swipe, label: 'Swipe'),
     (icon: Icons.explore, label: 'Keşfet'),
+    (icon: Icons.track_changes, label: 'Takip'),
     (icon: Icons.search, label: 'Arama'),
     (icon: Icons.group, label: 'Sosyal'),
   ];
@@ -28,6 +30,7 @@ class RootView extends GetView<RootController> {
           children: const [
             SwipeView(),
             DiscoverView(),
+            TakipView(),
             SearchView(),
             SocialView(),
           ],

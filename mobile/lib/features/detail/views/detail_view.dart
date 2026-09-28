@@ -780,7 +780,7 @@ class _ShowTrackerSection extends StatelessWidget {
                 Text(
                   season == null
                       ? 'Henüz başlamadın'
-                      : 'S$season · B$episode / $seasonEpisodes',
+                      : '$season. Sezon · $episode/$seasonEpisodes bölüm',
                   style: AppTextStyles.labelSm.copyWith(
                     color: season == null
                         ? AppColors.onSurfaceVariant

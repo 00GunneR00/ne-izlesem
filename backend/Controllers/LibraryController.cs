@@ -10,7 +10,7 @@ namespace Neizlesem.Api.Controllers;
 
 [ApiController]
 [Route("api/library")]
-public class LibraryController(AppDbContext db, TitleCacheService titleCache, TitleMapper mapper) : ControllerBase
+public class LibraryController(AppDbContext db, TitleCacheService titleCache, TitleMapper mapper, ITmdbService tmdb) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<List<LibraryEntryDto>>> GetForUser(
@@ -175,6 +175,67 @@ public class LibraryController(AppDbContext db, TitleCacheService titleCache, Ti
         }
         await db.SaveChangesAsync(ct);
         return ToDto(entry);
+    }
+
+    /// <summary>
+    /// "▶ Sonraki bölüm" from the Listem strip: logs the episode after the
+    /// current one, rolling over into the next aired season. Season/episode
+    /// counts come from TMDB so the client doesn't need them.
+    /// </summary>
+    [HttpPost("{id:int}/next-episode")]
+    public async Task<ActionResult<NextEpisodeResultDto>> NextEpisode(int id, [FromQuery] int userId, CancellationToken ct)
+    {
+        var entry = await db.LibraryEntries.Include(e => e.Title)
+            .FirstOrDefaultAsync(e => e.Id == id && e.UserId == userId, ct);
+        if (entry is null)
+        {
+            return NotFound();
+        }
+        if (entry.Title!.MediaType != MediaType.Show)
+        {
+            return BadRequest("Bölüm takibi sadece diziler için.");
+        }
+
+        var show = await tmdb.GetDetailsAsync(MediaType.Show, entry.Title.TmdbId, ct);
+        var seasons = (show?.Seasons ?? [])
+            .Where(s => s.SeasonNumber > 0 && s.EpisodeCount > 0)
+            .OrderBy(s => s.SeasonNumber)
+            .ToList();
+        if (seasons.Count == 0)
+        {
+            return BadRequest("Bu dizinin bölüm bilgisi yok.");
+        }
+
+        (int Season, int Episode)? next;
+        if (entry.CurrentSeason is not { } season)
+        {
+            next = (seasons[0].SeasonNumber, 1);
+        }
+        else
+        {
+            var episode = entry.CurrentEpisode ?? 0;
+            var count = seasons.FirstOrDefault(s => s.SeasonNumber == season)?.EpisodeCount ?? 0;
+            var following = seasons.FirstOrDefault(s => s.SeasonNumber > season);
+            next = episode < count ? (season, episode + 1)
+                : following is not null ? (following.SeasonNumber, 1)
+                : null;
+        }
+        if (next is null)
+        {
+            return Conflict("Yayınlanan tüm bölümleri izledin.");
+        }
+
+        entry.CurrentSeason = next.Value.Season;
+        entry.CurrentEpisode = next.Value.Episode;
+        if (entry.Status == LibraryStatus.ToWatch)
+        {
+            SetStatus(entry, LibraryStatus.Watching);
+        }
+        await db.SaveChangesAsync(ct);
+
+        var last = seasons[^1];
+        var finished = next.Value.Season == last.SeasonNumber && next.Value.Episode >= last.EpisodeCount;
+        return new NextEpisodeResultDto(ToDto(entry), finished);
     }
 
     /// <summary>

@@ -39,8 +39,13 @@ class LibraryEntryModel {
 }
 
 extension LibraryEntryProgress on LibraryEntryModel {
-  /// "S2 · B5", or null when no episode has been logged.
-  String? get progressLabel => currentSeason == null
-      ? null
-      : 'S$currentSeason · B${currentEpisode ?? 0}';
+  /// "S2 · B5"; "S2 · Başlamadın" when a season was picked but none of it
+  /// logged yet (episode 0); null when there's no progress at all.
+  String? get progressLabel {
+    if (currentSeason == null) return null;
+    final episode = currentEpisode ?? 0;
+    return episode == 0
+        ? 'S$currentSeason · Başlamadın'
+        : 'S$currentSeason · B$episode';
+  }
 }

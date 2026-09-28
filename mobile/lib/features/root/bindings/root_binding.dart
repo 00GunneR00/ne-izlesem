@@ -4,6 +4,7 @@ import '../../profile/controllers/profile_controller.dart';
 import '../../search/controllers/search_controller.dart';
 import '../../social/controllers/social_controller.dart';
 import '../../swipe/controllers/swipe_controller.dart';
+import '../../takip/controllers/takip_controller.dart';
 import '../controllers/root_controller.dart';
 
 class RootBinding extends Bindings {
@@ -12,6 +13,7 @@ class RootBinding extends Bindings {
     Get.lazyPut(() => RootController());
     Get.lazyPut(() => SwipeController());
     Get.lazyPut(() => DiscoverController());
+    Get.lazyPut(() => TakipController());
     // Unlike the other root controllers, ProfileController has no
     // permanently-mounted consumer (Kütüphanem/Profil are pushed pages, not
     // an always-alive IndexedStack tab) — GetX's smart management disposes

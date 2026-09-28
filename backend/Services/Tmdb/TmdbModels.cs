@@ -53,6 +53,13 @@ public class TmdbTitle
     // TV details only.
     public List<TmdbSeason> Seasons { get; set; } = new();
 
+    // TV details only: drives Takip's "Yeni Bölümler".
+    [JsonPropertyName("next_episode_to_air")]
+    public TmdbEpisodeRef? NextEpisodeToAir { get; set; }
+
+    [JsonPropertyName("last_episode_to_air")]
+    public TmdbEpisodeRef? LastEpisodeToAir { get; set; }
+
     [JsonPropertyName("original_title")]
     public string? OriginalTitle { get; set; }
 
@@ -173,4 +180,18 @@ public class TmdbSeason
 
     [JsonPropertyName("episode_count")]
     public int EpisodeCount { get; set; }
+}
+
+public class TmdbEpisodeRef
+{
+    public string? Name { get; set; }
+
+    [JsonPropertyName("air_date")]
+    public string? AirDate { get; set; }
+
+    [JsonPropertyName("season_number")]
+    public int SeasonNumber { get; set; }
+
+    [JsonPropertyName("episode_number")]
+    public int EpisodeNumber { get; set; }
 }

@@ -15,6 +15,7 @@ import '../../../data/services/likes_service.dart';
 import '../../../data/services/suggestions_service.dart';
 import '../../../data/services/titles_service.dart';
 import '../../../data/services/user_service.dart';
+import '../../profile/controllers/profile_controller.dart';
 
 class SocialController extends GetxController {
   final TitlesService _titlesService = TitlesService();
@@ -44,7 +45,7 @@ class SocialController extends GetxController {
   final RxMap<int, int> likeCounts = <int, int>{}.obs;
   final RxBool isLoading = true.obs;
   final RxBool isSearching = false.obs;
-  final RxInt selectedTab = 0.obs; // 0 = Arkadaş Akışı, 1 = Genel Trend
+  final RxInt selectedTab = 0.obs; // 0 = Arkadaş Akışı, 1 = Genel Trend, 2 = Listem
   final RxBool showingGroups = false.obs; // Arkadaşların/Gruplarım toggle
 
   void toggleConnectionsView() => showingGroups.toggle();
@@ -222,7 +223,11 @@ class SocialController extends GetxController {
     }
   }
 
-  void selectTab(int index) => selectedTab.value = index;
+  void selectTab(int index) {
+    selectedTab.value = index;
+    // Listem shows the library; refresh so changes made elsewhere appear.
+    if (index == 2) Get.find<ProfileController>().refreshAll();
+  }
 
   int likeCountFor(int tmdbId) => likeCounts[tmdbId] ?? 0;
 
