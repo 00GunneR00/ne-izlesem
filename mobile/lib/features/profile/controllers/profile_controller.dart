@@ -14,25 +14,30 @@ class ProfileController extends GetxController {
 
   static const _pageSize = 24;
 
-  // Index 0 = İzlediklerim (watched), 1 = İzleyeceklerim (toWatch) — movies
-  // and shows are mixed in one backend-paginated stream per tab; the
-  // Film/Dizi/Tümü chip then just filters whatever's been loaded so far.
-  final List<RxList<LibraryEntryModel>> _entries = [
-    <LibraryEntryModel>[].obs,
-    <LibraryEntryModel>[].obs,
+  /// Tab index → library status: 0 = İzlediklerim, 1 = İzleyeceklerim,
+  /// 2 = İzliyorum (shows in progress). Movies and shows are mixed in one
+  /// backend-paginated stream per tab; the Film/Dizi/Tümü chip then just
+  /// filters whatever's been loaded so far.
+  static const tabStatuses = [
+    LibraryStatus.watched,
+    LibraryStatus.toWatch,
+    LibraryStatus.watching,
   ];
-  final List<int> _pages = [1, 1];
-  final List<bool> _hasMore = [true, true];
-  final RxBool isLoadingMoreWatched = false.obs;
-  final RxBool isLoadingMoreToWatch = false.obs;
 
-  final RxInt watchedTotalCount = 0.obs;
-  final RxInt toWatchTotalCount = 0.obs;
+  final List<RxList<LibraryEntryModel>> _entries = [
+    for (final _ in tabStatuses) <LibraryEntryModel>[].obs,
+  ];
+  final List<int> _pages = [for (final _ in tabStatuses) 1];
+  final List<bool> _hasMore = [for (final _ in tabStatuses) true];
+  final List<RxBool> _isLoadingMore = [
+    for (final _ in tabStatuses) false.obs,
+  ];
+  final List<RxInt> _totalCounts = [for (final _ in tabStatuses) 0.obs];
 
   final RxBool isLoading = true.obs;
   final RxnString displayName = RxnString();
 
-  final RxInt mainTab = 0.obs; // 0 = İzlediklerim, 1 = İzleyeceklerim
+  final RxInt mainTab = 0.obs;
   final Rx<ProfileMediaFilter> selectedFilter = ProfileMediaFilter.all.obs;
 
   RxList<LibraryEntryModel> get watched => _entries[0];
@@ -70,46 +75,40 @@ class ProfileController extends GetxController {
   /// Whether more pages exist for this tab — the grid uses this to decide
   /// whether to keep a loading footer around.
   bool hasMoreFor(int tab) => _hasMore[tab];
+  bool isLoadingMore(int tab) => _isLoadingMore[tab].value;
 
-  int get watchedCount => watchedTotalCount.value;
-  int get toWatchCount => toWatchTotalCount.value;
+  int get watchedCount => _totalCounts[0].value;
+  int get toWatchCount => _totalCounts[1].value;
+  int get watchingCount => _totalCounts[2].value;
 
   int? get _userId => _session.userId.value;
-
-  LibraryStatus _statusFor(int tab) =>
-      tab == 0 ? LibraryStatus.watched : LibraryStatus.toWatch;
 
   Future<void> refreshAll() async {
     final userId = _userId;
     if (userId == null) return;
     isLoading.value = true;
-    _pages[0] = 1;
-    _pages[1] = 1;
-    _hasMore[0] = true;
-    _hasMore[1] = true;
+    for (var tab = 0; tab < tabStatuses.length; tab++) {
+      _pages[tab] = 1;
+      _hasMore[tab] = true;
+    }
     try {
       final results = await Future.wait([
-        _libraryService.getForUser(
-          userId,
-          status: LibraryStatus.watched,
-          page: 1,
-          pageSize: _pageSize,
-        ),
-        _libraryService.getForUser(
-          userId,
-          status: LibraryStatus.toWatch,
-          page: 1,
-          pageSize: _pageSize,
-        ),
-        _libraryService.getCount(userId, status: LibraryStatus.watched),
-        _libraryService.getCount(userId, status: LibraryStatus.toWatch),
+        for (final status in tabStatuses)
+          _libraryService.getForUser(
+            userId,
+            status: status,
+            page: 1,
+            pageSize: _pageSize,
+          ),
+        for (final status in tabStatuses)
+          _libraryService.getCount(userId, status: status),
       ]);
-      watched.value = results[0] as List<LibraryEntryModel>;
-      toWatch.value = results[1] as List<LibraryEntryModel>;
-      _hasMore[0] = watched.length >= _pageSize;
-      _hasMore[1] = toWatch.length >= _pageSize;
-      watchedTotalCount.value = results[2] as int;
-      toWatchTotalCount.value = results[3] as int;
+      for (var tab = 0; tab < tabStatuses.length; tab++) {
+        final page = results[tab] as List<LibraryEntryModel>;
+        _entries[tab].value = page;
+        _hasMore[tab] = page.length >= _pageSize;
+        _totalCounts[tab].value = results[tabStatuses.length + tab] as int;
+      }
     } finally {
       isLoading.value = false;
     }
@@ -118,14 +117,14 @@ class ProfileController extends GetxController {
   /// Called by the grid when the user scrolls near the bottom of a tab.
   Future<void> loadMore(int tab) async {
     final userId = _userId;
-    final loadingFlag = tab == 0 ? isLoadingMoreWatched : isLoadingMoreToWatch;
+    final loadingFlag = _isLoadingMore[tab];
     if (userId == null || !_hasMore[tab] || loadingFlag.value) return;
     loadingFlag.value = true;
     try {
       final nextPage = _pages[tab] + 1;
       final page = await _libraryService.getForUser(
         userId,
-        status: _statusFor(tab),
+        status: tabStatuses[tab],
         page: nextPage,
         pageSize: _pageSize,
       );
@@ -137,34 +136,34 @@ class ProfileController extends GetxController {
     }
   }
 
+  int _tabOf(LibraryEntryModel entry) =>
+      _entries.indexWhere((list) => list.any((e) => e.id == entry.id));
+
+  void _decrement(int tab) =>
+      _totalCounts[tab].value = (_totalCounts[tab].value - 1).clamp(0, 1 << 31);
+
   Future<void> markWatched(LibraryEntryModel entry) async {
-    await _libraryService.updateStatus(entry.id, LibraryStatus.watched);
+    final updated = await _libraryService.updateStatus(
+      entry.id,
+      LibraryStatus.watched,
+    );
     // Optimistic local move instead of a full refetch — with pagination a
     // wholesale refreshAll() would reset scroll position on every tap.
-    toWatch.removeWhere((e) => e.id == entry.id);
-    watched.insert(
-      0,
-      LibraryEntryModel(
-        id: entry.id,
-        userId: entry.userId,
-        title: entry.title,
-        status: LibraryStatus.watched,
-        addedAt: entry.addedAt,
-      ),
-    );
-    toWatchTotalCount.value = (toWatchTotalCount.value - 1).clamp(0, 1 << 31);
-    watchedTotalCount.value += 1;
+    final from = _tabOf(entry);
+    if (from >= 0) {
+      _entries[from].removeWhere((e) => e.id == entry.id);
+      _decrement(from);
+    }
+    watched.insert(0, updated);
+    _totalCounts[0].value += 1;
   }
 
   Future<void> remove(LibraryEntryModel entry) async {
     await _libraryService.remove(entry.id);
-    final wasWatched = watched.any((e) => e.id == entry.id);
-    watched.removeWhere((e) => e.id == entry.id);
-    toWatch.removeWhere((e) => e.id == entry.id);
-    if (wasWatched) {
-      watchedTotalCount.value = (watchedTotalCount.value - 1).clamp(0, 1 << 31);
-    } else {
-      toWatchTotalCount.value = (toWatchTotalCount.value - 1).clamp(0, 1 << 31);
+    final from = _tabOf(entry);
+    if (from >= 0) {
+      _entries[from].removeWhere((e) => e.id == entry.id);
+      _decrement(from);
     }
   }
 }

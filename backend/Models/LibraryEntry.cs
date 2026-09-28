@@ -13,4 +13,8 @@ public class LibraryEntry
     /// <summary>Personal 1–5 star rating; only meaningful once watched.</summary>
     public int? Rating { get; set; }
     public DateTime? RatedAt { get; set; }
+
+    /// <summary>Shows only: last watched episode ("S2 · B5").</summary>
+    public int? CurrentSeason { get; set; }
+    public int? CurrentEpisode { get; set; }
 }

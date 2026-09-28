@@ -2,6 +2,7 @@ import '../../core/network/api_client.dart';
 import '../models/cast_member_model.dart';
 import '../models/enums.dart';
 import '../models/genre_model.dart';
+import '../models/season_model.dart';
 import '../models/title_model.dart';
 import '../models/trailer_model.dart';
 
@@ -43,6 +44,12 @@ class TitlesService {
       },
     );
     return (response.data as List).map((e) => TitleModel.fromJson(e)).toList();
+  }
+
+  /// Aired seasons of a show (no specials).
+  Future<List<SeasonModel>> getSeasons(int tmdbId) async {
+    final response = await _dio.get('/titles/Show/$tmdbId/seasons');
+    return (response.data as List).map((e) => SeasonModel.fromJson(e)).toList();
   }
 
   /// "Senin İçin": titles similar to what the user rated/liked/watched.

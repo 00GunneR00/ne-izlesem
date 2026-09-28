@@ -80,7 +80,7 @@ public class RecommendationsController(
     {
         var watched = await db.LibraryEntries
             .Include(e => e.Title)
-            .Where(e => e.UserId == userId && e.Status == LibraryStatus.Watched
+            .Where(e => e.UserId == userId && (e.Status == LibraryStatus.Watched || e.Status == LibraryStatus.Watching)
                         && e.Title!.MediaType == mediaType && (e.Rating == null || e.Rating >= 3))
             .OrderByDescending(e => e.Rating ?? 0)
             .ThenByDescending(e => e.AddedAt)

@@ -20,3 +20,5 @@ public record TrailerDto(string Key, string Name, string Site, string Type);
 public record PersonDto(int TmdbId, string Name, string? ProfileUrl, string? KnownForDepartment);
 
 public record CastMemberDto(int PersonId, string Name, string? ProfileUrl, string? Character);
+
+public record SeasonDto(int SeasonNumber, string Name, int EpisodeCount);

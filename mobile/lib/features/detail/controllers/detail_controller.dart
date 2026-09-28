@@ -1,9 +1,12 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../core/session/session_service.dart';
 import '../../../data/models/cast_member_model.dart';
 import '../../../data/models/comment_model.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/models/genre_model.dart';
+import '../../../data/models/library_entry_model.dart';
+import '../../../data/models/season_model.dart';
 import '../../../data/models/title_model.dart';
 import '../../../data/models/trailer_model.dart';
 import '../../../data/services/comments_service.dart';
@@ -27,6 +30,12 @@ class DetailController extends GetxController {
   final Rxn<LibraryStatus> savedStatus = Rxn<LibraryStatus>();
   final Rxn<int> rating = Rxn<int>();
   final RxBool isRating = false.obs;
+
+  // Shows only: seasons + "nerede kaldın" (last watched episode).
+  final RxList<SeasonModel> seasons = <SeasonModel>[].obs;
+  final Rxn<int> progressSeason = Rxn<int>();
+  final Rxn<int> progressEpisode = Rxn<int>();
+  final RxBool isSavingProgress = false.obs;
   int? _entryId;
 
   /// Status before the last change on this screen, so undoing "İzledim" on
@@ -43,6 +52,15 @@ class DetailController extends GetxController {
     _loadGenres();
     _loadComments();
     _loadCast();
+    if (title.mediaType == MediaType.show) _loadSeasons();
+  }
+
+  Future<void> _loadSeasons() async {
+    try {
+      seasons.value = await _titlesService.getSeasons(title.tmdbId);
+    } catch (_) {
+      // No tracking card without season data; the rest of the page is fine.
+    }
   }
 
   Future<void> _loadCast() async {
@@ -111,6 +129,7 @@ class DetailController extends GetxController {
       _entryId = entry?.id;
       savedStatus.value = entry?.status;
       rating.value = entry?.rating;
+      _applyProgress(entry);
     } catch (_) {
       // Buttons just start unselected; saving still works.
     }
@@ -128,11 +147,13 @@ class DetailController extends GetxController {
           final entry = await _libraryService.updateStatus(_entryId!, restore);
           savedStatus.value = restore;
           rating.value = entry.rating;
+          _applyProgress(entry);
         } else {
           await _libraryService.remove(_entryId!);
           _entryId = null;
           savedStatus.value = null;
           rating.value = null;
+          _applyProgress(null);
         }
         _previousStatus = null;
         return;
@@ -149,6 +170,7 @@ class DetailController extends GetxController {
       savedStatus.value = status;
       // The backend drops the rating when an entry leaves "İzledim".
       rating.value = entry.rating;
+      _applyProgress(entry);
     } catch (_) {
       Get.snackbar('Olmadı', 'Kütüphane güncellenemedi, tekrar dene.');
     } finally {
@@ -171,6 +193,123 @@ class DetailController extends GetxController {
       Get.snackbar('Olmadı', 'Puanın kaydedilemedi, tekrar dene.');
     } finally {
       isRating.value = false;
+    }
+  }
+
+  void _applyProgress(LibraryEntryModel? entry) {
+    progressSeason.value = entry?.currentSeason;
+    progressEpisode.value = entry?.currentEpisode;
+  }
+
+  int _episodeCount(int season) {
+    for (final s in seasons) {
+      if (s.seasonNumber == season) return s.episodeCount;
+    }
+    return 0;
+  }
+
+  /// The episode "Sonraki bölümü izledim" would log, or null when the last
+  /// aired episode is already logged.
+  ({int season, int episode})? get nextEpisode {
+    if (seasons.isEmpty) return null;
+    final season = progressSeason.value;
+    final episode = progressEpisode.value ?? 0;
+    if (season == null) {
+      return (season: seasons.first.seasonNumber, episode: 1);
+    }
+    if (episode < _episodeCount(season)) {
+      return (season: season, episode: episode + 1);
+    }
+    for (final s in seasons) {
+      if (s.seasonNumber > season) return (season: s.seasonNumber, episode: 1);
+    }
+    return null;
+  }
+
+  /// Share of aired episodes watched so far, for the progress bar.
+  double get overallProgress {
+    final season = progressSeason.value;
+    if (season == null || seasons.isEmpty) return 0;
+    var total = 0;
+    var done = 0;
+    for (final s in seasons) {
+      total += s.episodeCount;
+      if (s.seasonNumber < season) done += s.episodeCount;
+      if (s.seasonNumber == season) done += progressEpisode.value ?? 0;
+    }
+    return total == 0 ? 0 : (done / total).clamp(0, 1);
+  }
+
+  Future<void> watchNextEpisode() async {
+    final next = nextEpisode;
+    if (next != null) await setProgress(next.season, next.episode);
+  }
+
+  /// Steps back one episode (to the previous season's last one at E0).
+  Future<void> undoEpisode() async {
+    final season = progressSeason.value;
+    final episode = progressEpisode.value ?? 0;
+    if (season == null) return;
+    if (episode > 0) return setProgress(season, episode - 1);
+    SeasonModel? previous;
+    for (final s in seasons) {
+      if (s.seasonNumber < season) previous = s;
+    }
+    if (previous != null) {
+      await setProgress(previous.seasonNumber, previous.episodeCount);
+    }
+  }
+
+  /// Jump to the start of a season (nothing of it watched yet).
+  Future<void> selectSeason(int season) => setProgress(season, 0);
+
+  Future<void> setProgress(int season, int episode) async {
+    final userId = _session.userId.value;
+    if (userId == null || isSavingProgress.value) return;
+    isSavingProgress.value = true;
+    try {
+      var entryId = _entryId;
+      if (entryId == null) {
+        final entry = await _libraryService.add(
+          userId: userId,
+          tmdbId: title.tmdbId,
+          mediaType: title.mediaType,
+          status: LibraryStatus.watching,
+        );
+        entryId = entry.id;
+        _entryId = entryId;
+        _previousStatus = null;
+      }
+      final entry = await _libraryService.setProgress(
+        entryId,
+        userId,
+        season: season,
+        episode: episode,
+      );
+      if (savedStatus.value != entry.status) _previousStatus = savedStatus.value;
+      savedStatus.value = entry.status;
+      _applyProgress(entry);
+    } catch (_) {
+      Get.snackbar('Olmadı', 'İlerlemen kaydedilemedi, tekrar dene.');
+      return;
+    } finally {
+      isSavingProgress.value = false;
+    }
+
+    // Logged the very last aired episode — offer to call it watched.
+    if (nextEpisode == null && savedStatus.value != LibraryStatus.watched) {
+      Get.snackbar(
+        'Diziyi bitirdin! 🎉',
+        'İzledim olarak işaretlemek ister misin?',
+        duration: const Duration(seconds: 5),
+        mainButton: TextButton(
+          onPressed: () {
+            Get.closeCurrentSnackbar();
+            saveToLibrary(LibraryStatus.watched);
+          },
+          child: const Text('İşaretle'),
+        ),
+      );
     }
   }
 }

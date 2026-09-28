@@ -10,12 +10,22 @@ enum MediaType {
 
 enum LibraryStatus {
   toWatch,
-  watched;
+  watched,
 
-  String get apiValue => name == 'toWatch' ? 'ToWatch' : 'Watched';
+  /// A show in progress ("İzliyorum").
+  watching;
 
-  static LibraryStatus fromApi(String value) =>
-      value.toLowerCase() == 'towatch' ? LibraryStatus.toWatch : LibraryStatus.watched;
+  String get apiValue => switch (this) {
+        LibraryStatus.toWatch => 'ToWatch',
+        LibraryStatus.watched => 'Watched',
+        LibraryStatus.watching => 'Watching',
+      };
+
+  static LibraryStatus fromApi(String value) => switch (value.toLowerCase()) {
+        'towatch' => LibraryStatus.toWatch,
+        'watching' => LibraryStatus.watching,
+        _ => LibraryStatus.watched,
+      };
 }
 
 enum SwipeDirection {

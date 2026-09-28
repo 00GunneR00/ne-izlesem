@@ -63,6 +63,22 @@ public class TitlesController(ITmdbService tmdb, TitleMapper mapper) : Controlle
             .ToList();
     }
 
+    /// <summary>Aired seasons of a show (specials/"season 0" and empty future seasons left out).</summary>
+    [HttpGet("Show/{tmdbId:int}/seasons")]
+    public async Task<ActionResult<List<SeasonDto>>> GetSeasons(int tmdbId, CancellationToken ct)
+    {
+        var show = await tmdb.GetDetailsAsync(MediaType.Show, tmdbId, ct);
+        if (show is null)
+        {
+            return NotFound();
+        }
+        return show.Seasons
+            .Where(s => s.SeasonNumber > 0 && s.EpisodeCount > 0)
+            .OrderBy(s => s.SeasonNumber)
+            .Select(s => new SeasonDto(s.SeasonNumber, s.Name, s.EpisodeCount))
+            .ToList();
+    }
+
     [HttpGet("{mediaType}/{tmdbId:int}/trailers")]
     public async Task<ActionResult<List<TrailerDto>>> GetTrailers(MediaType mediaType, int tmdbId, CancellationToken ct)
     {

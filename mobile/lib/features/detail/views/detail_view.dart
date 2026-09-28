@@ -230,6 +230,8 @@ class DetailView extends GetView<DetailController> {
                           : const SizedBox(width: double.infinity),
                     ),
                   ),
+                  if (title.mediaType == MediaType.show)
+                    _ShowTrackerSection(controller: controller),
                   const SizedBox(height: AppSpacing.md),
                   Obx(() {
                     // Read genres unconditionally so GetX always has an
@@ -549,5 +551,125 @@ class _WhereToWatchSection extends StatelessWidget {
           ),
       ],
     );
+  }
+}
+
+/// Shows only: "nerede kaldın?" — last watched episode with a one-tap
+/// "next episode" button, a season picker and overall progress.
+class _ShowTrackerSection extends StatelessWidget {
+  final DetailController controller;
+  const _ShowTrackerSection({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final seasons = controller.seasons;
+      if (seasons.isEmpty) return const SizedBox.shrink();
+      final season = controller.progressSeason.value;
+      final episode = controller.progressEpisode.value ?? 0;
+      final next = controller.nextEpisode;
+      final busy = controller.isSavingProgress.value;
+      final seasonEpisodes = season == null
+          ? 0
+          : seasons
+                .firstWhere(
+                  (s) => s.seasonNumber == season,
+                  orElse: () => seasons.first,
+                )
+                .episodeCount;
+
+      return Container(
+        margin: const EdgeInsets.only(top: AppSpacing.md),
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: AppColors.outline),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Dizi Takibi',
+                  style: AppTextStyles.headlineMd.copyWith(fontSize: 16),
+                ),
+                const Spacer(),
+                Text(
+                  season == null
+                      ? 'Henüz başlamadın'
+                      : 'S$season · B$episode / $seasonEpisodes',
+                  style: AppTextStyles.labelSm.copyWith(
+                    color: season == null
+                        ? AppColors.onSurfaceVariant
+                        : AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.full),
+              child: LinearProgressIndicator(
+                value: controller.overallProgress,
+                minHeight: 6,
+                backgroundColor: AppColors.surfaceContainerHigh,
+                color: AppColors.primaryContainer,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              children: [
+                DropdownButton<int>(
+                  value: season,
+                  hint: Text('Sezon seç', style: AppTextStyles.labelSm),
+                  dropdownColor: AppColors.surfaceContainer,
+                  underline: const SizedBox.shrink(),
+                  style: AppTextStyles.labelSm,
+                  items: [
+                    for (final s in seasons)
+                      DropdownMenuItem(
+                        value: s.seasonNumber,
+                        child: Text('${s.seasonNumber}. Sezon'),
+                      ),
+                  ],
+                  onChanged: busy
+                      ? null
+                      : (value) {
+                          if (value != null && value != season) {
+                            controller.selectSeason(value);
+                          }
+                        },
+                ),
+                const Spacer(),
+                IconButton(
+                  tooltip: 'Bir bölüm geri al',
+                  onPressed: busy || season == null
+                      ? null
+                      : controller.undoEpisode,
+                  icon: const Icon(Icons.remove_circle_outline),
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ],
+            ),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: busy || next == null
+                    ? null
+                    : controller.watchNextEpisode,
+                icon: const Icon(Icons.play_arrow_rounded),
+                label: Text(
+                  next == null
+                      ? 'Tüm bölümleri izledin'
+                      : 'İzledim: S${next.season} · B${next.episode}',
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    });
   }
 }

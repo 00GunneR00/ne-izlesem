@@ -259,6 +259,12 @@ namespace Neizlesem.Api.Migrations
                     b.Property<DateTime>("AddedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int?>("CurrentEpisode")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CurrentSeason")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime?>("RatedAt")
                         .HasColumnType("timestamp with time zone");
 

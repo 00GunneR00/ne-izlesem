@@ -87,6 +87,21 @@ class LibraryService {
 
   Future<void> remove(int entryId) => _dio.delete('/library/$entryId');
 
+  /// Shows only: last watched episode. Moves a not-yet-started show to
+  /// "İzliyorum".
+  Future<LibraryEntryModel> setProgress(
+    int entryId,
+    int userId, {
+    required int season,
+    required int episode,
+  }) async {
+    final response = await _dio.put(
+      '/library/$entryId/progress',
+      data: {'userId': userId, 'season': season, 'episode': episode},
+    );
+    return LibraryEntryModel.fromJson(response.data);
+  }
+
   /// 1–5 stars, or null to clear. Only allowed on watched entries.
   Future<LibraryEntryModel> setRating(int entryId, int userId, int? rating) async {
     final response = await _dio.put(

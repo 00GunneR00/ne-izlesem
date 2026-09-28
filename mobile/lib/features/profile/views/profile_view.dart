@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../data/models/enums.dart';
 import '../../../data/models/library_entry_model.dart';
 import '../controllers/profile_controller.dart';
 import '../widgets/staggered_fade_in.dart';
@@ -62,7 +63,7 @@ class _ProfileViewState extends State<ProfileView> {
                   return PageView(
                     controller: _pageController,
                     onPageChanged: controller.changeMainTab,
-                    children: [_grid(0), _grid(1)],
+                    children: [_grid(0), _grid(1), _grid(2)],
                   );
                 }),
               ),
@@ -76,9 +77,7 @@ class _ProfileViewState extends State<ProfileView> {
   Widget _grid(int tab) {
     return Obx(() {
       final entries = controller.entriesFor(tab);
-      final isLoadingMore = tab == 0
-          ? controller.isLoadingMoreWatched.value
-          : controller.isLoadingMoreToWatch.value;
+      final isLoadingMore = controller.isLoadingMore(tab);
       if (entries.isEmpty) {
         return isLoadingMore
             ? const Center(child: CircularProgressIndicator())
@@ -120,7 +119,7 @@ class _ProfileViewState extends State<ProfileView> {
                     index: index,
                     child: _PosterCard(
                       entry: entries[index],
-                      showMarkWatched: tab == 1,
+                      showMarkWatched: tab != 0,
                       onMarkWatched: () =>
                           controller.markWatched(entries[index]),
                       onRemove: () => controller.remove(entries[index]),
@@ -192,6 +191,8 @@ class _ProfileViewState extends State<ProfileView> {
                       _stat(controller.watchedCount, 'İzlenen'),
                       const SizedBox(width: AppSpacing.lg),
                       _stat(controller.toWatchCount, 'Listede'),
+                      const SizedBox(width: AppSpacing.lg),
+                      _stat(controller.watchingCount, 'İzliyor'),
                     ],
                   ),
                 ),
@@ -227,6 +228,7 @@ class _ProfileViewState extends State<ProfileView> {
               children: [
                 Expanded(child: _mainTabButton('İzlediklerim', 0)),
                 Expanded(child: _mainTabButton('İzleyeceklerim', 1)),
+                Expanded(child: _mainTabButton('İzliyorum', 2)),
               ],
             ),
           ),
@@ -400,6 +402,34 @@ class _PosterCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (entry.progressLabel != null || entry.rating != null)
+                  Positioned(
+                    top: 6,
+                    left: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.background.withValues(alpha: 0.75),
+                        borderRadius: BorderRadius.circular(AppRadius.full),
+                        border: Border.all(color: AppColors.primaryContainer),
+                      ),
+                      child: Text(
+                        entry.status == LibraryStatus.watching &&
+                                entry.progressLabel != null
+                            ? entry.progressLabel!
+                            : entry.rating != null
+                            ? '★ ${entry.rating}'
+                            : entry.progressLabel!,
+                        style: AppTextStyles.labelSm.copyWith(
+                          fontSize: 11,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                  ),
                 Positioned(
                   top: 4,
                   right: 4,

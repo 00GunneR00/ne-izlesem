@@ -50,6 +50,9 @@ public class TmdbTitle
     [JsonPropertyName("genres")]
     public List<TmdbGenre> Genres { get; set; } = new();
 
+    // TV details only.
+    public List<TmdbSeason> Seasons { get; set; } = new();
+
     [JsonPropertyName("original_title")]
     public string? OriginalTitle { get; set; }
 
@@ -159,4 +162,15 @@ public class TmdbCastMember
 public class TmdbCreditsResponse
 {
     public List<TmdbCastMember> Cast { get; set; } = new();
+}
+
+public class TmdbSeason
+{
+    [JsonPropertyName("season_number")]
+    public int SeasonNumber { get; set; }
+
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("episode_count")]
+    public int EpisodeCount { get; set; }
 }

@@ -143,7 +143,44 @@ public class LibraryController(AppDbContext db, TitleCacheService titleCache, Ti
         return ToDto(entry);
     }
 
-    /// <summary>A rating only makes sense for something watched — moving back to "İzleyeceğim" drops it.</summary>
+    /// <summary>
+    /// Records the last watched episode of a show. Anything not finished yet
+    /// becomes "İzliyorum"; an already-watched show keeps its status (e.g.
+    /// a rewatch).
+    /// </summary>
+    [HttpPut("{id:int}/progress")]
+    public async Task<ActionResult<LibraryEntryDto>> SetProgress(int id, SetProgressRequest request, CancellationToken ct)
+    {
+        if (request.Season < 1 || request.Episode < 0)
+        {
+            return BadRequest("Geçersiz sezon/bölüm.");
+        }
+
+        var entry = await db.LibraryEntries.Include(e => e.Title)
+            .FirstOrDefaultAsync(e => e.Id == id && e.UserId == request.UserId, ct);
+        if (entry is null)
+        {
+            return NotFound();
+        }
+        if (entry.Title!.MediaType != MediaType.Show)
+        {
+            return BadRequest("Bölüm takibi sadece diziler için.");
+        }
+
+        entry.CurrentSeason = request.Season;
+        entry.CurrentEpisode = request.Episode;
+        if (entry.Status == LibraryStatus.ToWatch)
+        {
+            SetStatus(entry, LibraryStatus.Watching);
+        }
+        await db.SaveChangesAsync(ct);
+        return ToDto(entry);
+    }
+
+    /// <summary>
+    /// A rating only makes sense for something watched, and episode progress
+    /// only once started — moving back to "İzleyeceğim" drops both.
+    /// </summary>
     private static void SetStatus(LibraryEntry entry, LibraryStatus status)
     {
         entry.Status = status;
@@ -152,7 +189,13 @@ public class LibraryController(AppDbContext db, TitleCacheService titleCache, Ti
             entry.Rating = null;
             entry.RatedAt = null;
         }
+        if (status == LibraryStatus.ToWatch)
+        {
+            entry.CurrentSeason = null;
+            entry.CurrentEpisode = null;
+        }
     }
 
-    private LibraryEntryDto ToDto(LibraryEntry e) => new(e.Id, e.UserId, mapper.ToDto(e.Title!), e.Status, e.AddedAt, e.Rating);
+    private LibraryEntryDto ToDto(LibraryEntry e) =>
+        new(e.Id, e.UserId, mapper.ToDto(e.Title!), e.Status, e.AddedAt, e.Rating, e.CurrentSeason, e.CurrentEpisode);
 }
