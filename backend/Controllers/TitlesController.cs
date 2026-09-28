@@ -29,7 +29,7 @@ public class TitlesController(ITmdbService tmdb, TitleMapper mapper) : Controlle
         [FromQuery] MediaType mediaType, [FromQuery] int? genreId, [FromQuery] int page = 1,
         [FromQuery] int? providerId = null, CancellationToken ct = default)
     {
-        var result = await tmdb.DiscoverAsync(mediaType, genreId, page, providerId, ct);
+        var result = await tmdb.DiscoverAsync(mediaType, genreId.HasValue ? [genreId.Value] : null, page, providerId, ct);
         return result.Results.Select(t => mapper.ToDto(t, mediaType)).ToList();
     }
 

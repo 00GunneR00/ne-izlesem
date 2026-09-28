@@ -7,12 +7,10 @@ import '../../../data/models/title_model.dart';
 import '../../../data/services/library_service.dart';
 import '../../../data/services/swipe_service.dart';
 import '../../../data/services/titles_service.dart';
-import '../../../data/services/user_service.dart';
 
 class SwipeController extends GetxController {
   final TitlesService _titlesService = TitlesService();
   final SwipeService _swipeService = SwipeService();
-  final UserService _userService = UserService();
   final LibraryService _libraryService = LibraryService();
   final SessionService _session = Get.find();
   final Random _random = Random();
@@ -24,7 +22,6 @@ class SwipeController extends GetxController {
 
   static const _maxStartPage = 20;
   int _page = 1;
-  int? _preferredGenreId;
   int _loadToken = 0;
   bool _isFetchingMore = false;
   final Set<String> _seenKeys = {};
@@ -36,13 +33,6 @@ class SwipeController extends GetxController {
   }
 
   Future<void> _bootstrap() async {
-    final userId = _session.userId.value;
-    if (userId != null) {
-      final user = await _userService.getById(userId);
-      if (user.preferredGenreIds.isNotEmpty) {
-        _preferredGenreId = user.preferredGenreIds.first;
-      }
-    }
     // Start from a random page each time so the queue isn't identical
     // (same order, same titles) on every app open.
     _page = 1 + _random.nextInt(_maxStartPage);
@@ -85,25 +75,34 @@ class SwipeController extends GetxController {
     _isFetchingMore = true;
     isLoading.value = true;
     try {
-      // Preferred genre ids come from onboarding, which only offers movie
-      // genres — TMDB uses a different id space for TV genres, so the filter
-      // only makes sense while browsing movies.
-      final genreId = mediaType.value == MediaType.movie
-          ? _preferredGenreId
-          : null;
-      // A single page can come back with nothing new (every title already
+      final userId = _session.userId.value;
+      // A single batch can come back with nothing new (every title already
       // seen) or fail outright — neither means we're actually out of
       // content, so keep trying subsequent pages within this same call
       // instead of leaving the queue stuck with nothing left to swipe.
       for (var attempt = 0; attempt < 6; attempt++) {
         if (token != _loadToken) return; // superseded by a reset meanwhile
         try {
-          final results = await _titlesService.discover(
-            mediaType.value,
-            genreId: genreId,
-            page: _page,
-          );
-          _page++;
+          // The deck endpoint applies all preferred genres and drops titles
+          // swiped/saved in earlier sessions; _seenKeys still guards this
+          // session (a swipe is recorded fire-and-forget, so a refetch can
+          // race it).
+          final List<TitleModel> results;
+          if (userId != null) {
+            final deck = await _swipeService.getDeck(
+              userId: userId,
+              mediaType: mediaType.value,
+              page: _page,
+            );
+            results = deck.items;
+            _page = deck.nextPage;
+          } else {
+            results = await _titlesService.discover(
+              mediaType.value,
+              page: _page,
+            );
+            _page++;
+          }
           if (token != _loadToken) return;
 
           final fresh = [

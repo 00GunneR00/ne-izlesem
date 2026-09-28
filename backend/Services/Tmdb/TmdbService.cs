@@ -74,14 +74,15 @@ public class TmdbService(HttpClient httpClient, TmdbOptions options) : ITmdbServ
     public Task<TmdbPagedResult<TmdbTitle>> GetTrendingAsync(MediaType mediaType, int page = 1, CancellationToken ct = default) =>
         GetTitlePageAsync($"trending/{MediaSegment(mediaType)}/week?page={page}", ct);
 
-    public async Task<TmdbPagedResult<TmdbTitle>> DiscoverAsync(MediaType mediaType, int? genreId, int page = 1, int? providerId = null, CancellationToken ct = default)
+    public async Task<TmdbPagedResult<TmdbTitle>> DiscoverAsync(MediaType mediaType, IReadOnlyCollection<int>? anyOfGenreIds, int page = 1, int? providerId = null, CancellationToken ct = default)
     {
         string BuildUrl(int p)
         {
             var url = $"discover/{MediaSegment(mediaType)}?page={p}&sort_by=popularity.desc";
-            if (genreId.HasValue)
+            if (anyOfGenreIds is { Count: > 0 })
             {
-                url += $"&with_genres={genreId.Value}";
+                // "|" is TMDB's OR separator ("," would require every genre).
+                url += $"&with_genres={string.Join("|", anyOfGenreIds)}";
             }
             if (providerId.HasValue)
             {

@@ -1,6 +1,6 @@
 namespace Neizlesem.Api.Models;
 
-/// <summary>Raw like/pass signal from the swipe screen. Collected for future taste-modeling; no algorithm reads it yet.</summary>
+/// <summary>Like/pass signal from the swipe screen. Swiped titles are left out of later swipe decks.</summary>
 public class SwipeInteraction
 {
     public int Id { get; set; }
