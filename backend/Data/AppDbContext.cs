@@ -16,6 +16,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<GroupMember> GroupMembers => Set<GroupMember>();
     public DbSet<GroupSwipe> GroupSwipes => Set<GroupSwipe>();
     public DbSet<GroupMatch> GroupMatches => Set<GroupMatch>();
+    public DbSet<UserList> UserLists => Set<UserList>();
+    public DbSet<UserListItem> UserListItems => Set<UserListItem>();
     public DbSet<Suggestion> Suggestions => Set<Suggestion>();
     public DbSet<SuggestionRecipient> SuggestionRecipients => Set<SuggestionRecipient>();
 
@@ -61,6 +63,19 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<GroupMatch>()
             .HasIndex(m => new { m.GroupId, m.TitleId })
+            .IsUnique();
+
+        modelBuilder.Entity<UserList>()
+            .HasMany(l => l.Items)
+            .WithOne(i => i.List)
+            .HasForeignKey(i => i.ListId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<UserList>()
+            .HasIndex(l => l.OwnerId);
+
+        modelBuilder.Entity<UserListItem>()
+            .HasIndex(i => new { i.ListId, i.TitleId })
             .IsUnique();
 
         modelBuilder.Entity<SuggestionRecipient>()

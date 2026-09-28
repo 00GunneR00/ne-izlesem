@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import '../../discover/controllers/discover_controller.dart';
+import '../../lists/controllers/lists_controller.dart';
 import '../../profile/controllers/profile_controller.dart';
 import '../../search/controllers/search_controller.dart';
 import '../../social/controllers/social_controller.dart';
@@ -22,6 +23,9 @@ class RootBinding extends Bindings {
     // Get.find(), instead of throwing "not found".
     Get.lazyPut(() => ProfileController(), fenix: true);
     Get.lazyPut(() => SocialController());
+    // Also used from pushed pages (detail's "Listeye Ekle", list detail),
+    // so re-create on demand like ProfileController.
+    Get.lazyPut(() => ListsController(), fenix: true);
     Get.lazyPut(() => AppSearchController());
   }
 }

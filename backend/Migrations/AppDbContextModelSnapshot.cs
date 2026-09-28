@@ -469,6 +469,67 @@ namespace Neizlesem.Api.Migrations
                     b.ToTable("TitleLikes");
                 });
 
+            modelBuilder.Entity("Neizlesem.Api.Models.UserList", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsShared")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("OwnerId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId");
+
+                    b.ToTable("UserLists");
+                });
+
+            modelBuilder.Entity("Neizlesem.Api.Models.UserListItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("AddedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("ListId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TitleId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TitleId");
+
+                    b.HasIndex("ListId", "TitleId")
+                        .IsUnique();
+
+                    b.ToTable("UserListItems");
+                });
+
             modelBuilder.Entity("Neizlesem.Api.Models.Comment", b =>
                 {
                     b.HasOne("Neizlesem.Api.Models.Title", "Title")
@@ -685,9 +746,44 @@ namespace Neizlesem.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Neizlesem.Api.Models.UserList", b =>
+                {
+                    b.HasOne("Neizlesem.Api.Models.AppUser", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("Neizlesem.Api.Models.UserListItem", b =>
+                {
+                    b.HasOne("Neizlesem.Api.Models.UserList", "List")
+                        .WithMany("Items")
+                        .HasForeignKey("ListId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Neizlesem.Api.Models.Title", "Title")
+                        .WithMany()
+                        .HasForeignKey("TitleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("List");
+
+                    b.Navigation("Title");
+                });
+
             modelBuilder.Entity("Neizlesem.Api.Models.Suggestion", b =>
                 {
                     b.Navigation("Recipients");
+                });
+
+            modelBuilder.Entity("Neizlesem.Api.Models.UserList", b =>
+                {
+                    b.Navigation("Items");
                 });
 #pragma warning restore 612, 618
         }

@@ -9,6 +9,7 @@ import '../../../core/widgets/star_rating.dart';
 import '../../../data/models/comment_model.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/models/person_model.dart';
+import '../../lists/widgets/add_to_list_sheet.dart';
 import '../../search/views/person_filmography_view.dart';
 import '../../social/widgets/animated_like_icon.dart';
 import '../../social/widgets/suggest_dialog.dart';
@@ -195,6 +196,12 @@ class DetailView extends GetView<DetailController> {
                                       : Icons.check_circle_outline,
                                 ),
                                 label: const Text('İzledim'),
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              TextButton.icon(
+                                onPressed: () => showAddToListSheet(title),
+                                icon: const Icon(Icons.playlist_add),
+                                label: const Text('Listeye Ekle'),
                               ),
                             ],
                           ),
