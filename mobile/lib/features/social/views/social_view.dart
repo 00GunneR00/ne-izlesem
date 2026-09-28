@@ -11,6 +11,7 @@ import '../../../data/models/title_model.dart';
 import '../../account/widgets/app_drawer.dart';
 import '../../groups/views/group_detail_view.dart';
 import '../controllers/social_controller.dart';
+import '../../../core/widgets/spoiler_text.dart';
 import '../../../core/widgets/star_rating.dart';
 import '../widgets/animated_like_icon.dart';
 import '../widgets/notification_bell.dart';
@@ -475,8 +476,9 @@ class _FeedCard extends StatelessWidget {
                       ],
                       if (item.isComment && item.text != null) ...[
                         const SizedBox(height: AppSpacing.sm),
-                        Text(
-                          '"${item.text}"',
+                        SpoilerText(
+                          text: '"${item.text}"',
+                          isSpoiler: item.isSpoiler,
                           style: AppTextStyles.bodyMd.copyWith(
                             fontStyle: FontStyle.italic,
                             fontSize: 13,

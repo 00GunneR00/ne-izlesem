@@ -74,10 +74,15 @@ class DetailController extends GetxController {
     );
   }
 
-  Future<void> postComment(String text) async {
+  int? get currentUserId => _session.userId.value;
+
+  /// Returns true once saved, so the input is only cleared on success.
+  Future<bool> postComment(String text, {bool isSpoiler = false}) async {
     final userId = _session.userId.value;
     final trimmed = text.trim();
-    if (userId == null || trimmed.isEmpty || isPostingComment.value) return;
+    if (userId == null || trimmed.isEmpty || isPostingComment.value) {
+      return false;
+    }
     isPostingComment.value = true;
     try {
       final comment = await _commentsService.add(
@@ -85,10 +90,50 @@ class DetailController extends GetxController {
         tmdbId: title.tmdbId,
         mediaType: title.mediaType,
         text: trimmed,
+        isSpoiler: isSpoiler,
       );
       comments.insert(0, comment);
+      return true;
+    } catch (_) {
+      Get.snackbar('Olmadı', 'Yorumun gönderilemedi, tekrar dene.');
+      return false;
     } finally {
       isPostingComment.value = false;
+    }
+  }
+
+  Future<bool> editComment(
+    CommentModel comment,
+    String text, {
+    required bool isSpoiler,
+  }) async {
+    final userId = _session.userId.value;
+    final trimmed = text.trim();
+    if (userId == null || trimmed.isEmpty) return false;
+    try {
+      final updated = await _commentsService.update(
+        comment.id,
+        userId: userId,
+        text: trimmed,
+        isSpoiler: isSpoiler,
+      );
+      final index = comments.indexWhere((c) => c.id == comment.id);
+      if (index >= 0) comments[index] = updated;
+      return true;
+    } catch (_) {
+      Get.snackbar('Olmadı', 'Yorum güncellenemedi, tekrar dene.');
+      return false;
+    }
+  }
+
+  Future<void> deleteComment(CommentModel comment) async {
+    final userId = _session.userId.value;
+    if (userId == null) return;
+    try {
+      await _commentsService.delete(comment.id, userId);
+      comments.removeWhere((c) => c.id == comment.id);
+    } catch (_) {
+      Get.snackbar('Olmadı', 'Yorum silinemedi, tekrar dene.');
     }
   }
 

@@ -45,7 +45,7 @@ public class FeedController(AppDbContext db, TitleMapper mapper) : ControllerBas
             .ToListAsync(ct);
 
         var likes = likeEntities.Select(l => new FeedItemDto("Like", l.UserId, l.User!.DisplayName, mapper.ToDto(l.Title!), null, l.LikedAt));
-        var comments = commentEntities.Select(c => new FeedItemDto("Comment", c.UserId, c.User!.DisplayName, mapper.ToDto(c.Title!), c.Text, c.CreatedAt));
+        var comments = commentEntities.Select(c => new FeedItemDto("Comment", c.UserId, c.User!.DisplayName, mapper.ToDto(c.Title!), c.Text, c.CreatedAt, IsSpoiler: c.IsSpoiler));
         var ratings = ratingEntities.Select(e => new FeedItemDto("Rating", e.UserId, e.User!.DisplayName, mapper.ToDto(e.Title!), null, e.RatedAt!.Value, e.Rating));
 
         return likes.Concat(comments).Concat(ratings)

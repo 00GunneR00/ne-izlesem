@@ -8,6 +8,7 @@ class FeedItemModel {
   final String? text;
   final DateTime createdAt;
   final int? rating;
+  final bool isSpoiler;
 
   FeedItemModel({
     required this.type,
@@ -17,6 +18,7 @@ class FeedItemModel {
     this.text,
     required this.createdAt,
     this.rating,
+    this.isSpoiler = false,
   });
 
   bool get isComment => type == 'Comment';
@@ -30,5 +32,6 @@ class FeedItemModel {
         text: json['text'] as String?,
         createdAt: DateTime.parse(json['createdAt'] as String),
         rating: json['rating'] as int?,
+        isSpoiler: json['isSpoiler'] as bool? ?? false,
       );
 }

@@ -76,6 +76,12 @@ namespace Neizlesem.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("EditedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsSpoiler")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Text")
                         .IsRequired()
                         .HasColumnType("text");

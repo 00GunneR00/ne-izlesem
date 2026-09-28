@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../../../core/likes/likes_controller.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/spoiler_text.dart';
 import '../../../core/widgets/star_rating.dart';
 import '../../../data/models/comment_model.dart';
 import '../../../data/models/enums.dart';
@@ -324,13 +325,40 @@ class DetailView extends GetView<DetailController> {
   );
 }
 
-class _CommentsSection extends StatelessWidget {
+class _CommentsSection extends StatefulWidget {
   final DetailController controller;
   const _CommentsSection({required this.controller});
 
   @override
+  State<_CommentsSection> createState() => _CommentsSectionState();
+}
+
+class _CommentsSectionState extends State<_CommentsSection> {
+  // Kept in State (not rebuilt in build) so typed text survives rebuilds.
+  final _textController = TextEditingController();
+  bool _isSpoiler = false;
+
+  DetailController get controller => widget.controller;
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    final sent = await controller.postComment(
+      _textController.text,
+      isSpoiler: _isSpoiler,
+    );
+    if (sent && mounted) {
+      _textController.clear();
+      setState(() => _isSpoiler = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final textController = TextEditingController();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -339,48 +367,11 @@ class _CommentsSection extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: TextField(
-                controller: textController,
-                style: AppTextStyles.bodyMd,
-                maxLines: 3,
-                minLines: 1,
-                decoration: InputDecoration(
-                  hintText: 'Bir yorum yaz...',
-                  hintStyle: AppTextStyles.bodyMd.copyWith(
-                    color: AppColors.onSurfaceVariant,
-                  ),
-                  filled: true,
-                  fillColor: AppColors.surfaceContainer,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.sm,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    borderSide: const BorderSide(color: AppColors.outline),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    borderSide: const BorderSide(color: AppColors.outline),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    borderSide: const BorderSide(color: AppColors.primary),
-                  ),
-                ),
-              ),
-            ),
+            Expanded(child: _commentField(_textController)),
             const SizedBox(width: AppSpacing.sm),
             Obx(
               () => IconButton.filled(
-                onPressed: controller.isPostingComment.value
-                    ? null
-                    : () {
-                        final text = textController.text;
-                        textController.clear();
-                        controller.postComment(text);
-                      },
+                onPressed: controller.isPostingComment.value ? null : _send,
                 icon: controller.isPostingComment.value
                     ? const SizedBox(
                         width: 16,
@@ -395,6 +386,11 @@ class _CommentsSection extends StatelessWidget {
             ),
           ],
         ),
+        const SizedBox(height: AppSpacing.xs),
+        _spoilerChip(
+          selected: _isSpoiler,
+          onSelected: (value) => setState(() => _isSpoiler = value),
+        ),
         const SizedBox(height: AppSpacing.md),
         Obx(() {
           if (controller.comments.isEmpty) {
@@ -408,18 +404,159 @@ class _CommentsSection extends StatelessWidget {
           return Column(
             children: [
               for (final comment in controller.comments)
-                _CommentTile(comment: comment),
+                _CommentTile(
+                  key: ValueKey(comment.id),
+                  comment: comment,
+                  isMine: comment.userId == controller.currentUserId,
+                  onEdit: () => _openEditDialog(comment),
+                  onDelete: () => _confirmDelete(comment),
+                ),
             ],
           );
         }),
       ],
     );
   }
+
+  Future<void> _openEditDialog(CommentModel comment) async {
+    final editController = TextEditingController(text: comment.text);
+    var isSpoiler = comment.isSpoiler;
+    await Get.dialog(
+      StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: AppColors.surfaceContainer,
+          title: Text('Yorumu düzenle', style: AppTextStyles.headlineMd),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _commentField(editController, autofocus: true),
+              const SizedBox(height: AppSpacing.sm),
+              _spoilerChip(
+                selected: isSpoiler,
+                onSelected: (value) => setDialogState(() => isSpoiler = value),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: Get.back, child: const Text('Vazgeç')),
+            FilledButton(
+              onPressed: () async {
+                final saved = await controller.editComment(
+                  comment,
+                  editController.text,
+                  isSpoiler: isSpoiler,
+                );
+                if (saved) Get.back();
+              },
+              child: const Text('Kaydet'),
+            ),
+          ],
+        ),
+      ),
+    );
+    editController.dispose();
+  }
+
+  Future<void> _confirmDelete(CommentModel comment) async {
+    final confirmed = await Get.dialog<bool>(
+      AlertDialog(
+        backgroundColor: AppColors.surfaceContainer,
+        title: Text('Yorumu sil', style: AppTextStyles.headlineMd),
+        content: Text(
+          'Bu yorum kalıcı olarak silinecek.',
+          style: AppTextStyles.bodyMd,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('Vazgeç'),
+          ),
+          FilledButton(
+            onPressed: () => Get.back(result: true),
+            child: const Text('Sil'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await controller.deleteComment(comment);
+  }
+
+  Widget _spoilerChip({
+    required bool selected,
+    required ValueChanged<bool> onSelected,
+  }) => FilterChip(
+    selected: selected,
+    onSelected: onSelected,
+    avatar: Icon(
+      Icons.visibility_off_outlined,
+      size: 16,
+      color: selected ? Colors.white : AppColors.onSurfaceVariant,
+    ),
+    showCheckmark: false,
+    label: Text(
+      'Spoiler içeriyor',
+      style: AppTextStyles.labelSm.copyWith(
+        color: selected ? Colors.white : AppColors.onSurfaceVariant,
+      ),
+    ),
+    selectedColor: AppColors.primaryContainer,
+    backgroundColor: AppColors.surfaceContainer,
+    side: const BorderSide(color: AppColors.outline),
+  );
+
+  Widget _commentField(
+    TextEditingController textController, {
+    bool autofocus = false,
+  }) => TextField(
+    controller: textController,
+    autofocus: autofocus,
+    style: AppTextStyles.bodyMd,
+    maxLines: 3,
+    minLines: 1,
+    maxLength: 500,
+    buildCounter:
+        (_, {required currentLength, required isFocused, maxLength}) => null,
+    decoration: InputDecoration(
+      hintText: 'Bir yorum yaz...',
+      hintStyle: AppTextStyles.bodyMd.copyWith(
+        color: AppColors.onSurfaceVariant,
+      ),
+      filled: true,
+      fillColor: AppColors.surfaceContainer,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderSide: const BorderSide(color: AppColors.outline),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderSide: const BorderSide(color: AppColors.outline),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderSide: const BorderSide(color: AppColors.primary),
+      ),
+    ),
+  );
 }
 
 class _CommentTile extends StatelessWidget {
   final CommentModel comment;
-  const _CommentTile({required this.comment});
+  final bool isMine;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const _CommentTile({
+    required this.comment,
+    required this.isMine,
+    required this.onEdit,
+    required this.onDelete,
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -435,12 +572,56 @@ class _CommentTile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            comment.userDisplayName,
-            style: AppTextStyles.labelSm.copyWith(color: AppColors.primary),
+          Row(
+            children: [
+              Expanded(
+                child: Text.rich(
+                  TextSpan(
+                    text: comment.userDisplayName,
+                    style: AppTextStyles.labelSm.copyWith(
+                      color: AppColors.primary,
+                    ),
+                    children: [
+                      if (comment.editedAt != null)
+                        TextSpan(
+                          text: '  (düzenlendi)',
+                          style: AppTextStyles.labelSm.copyWith(
+                            fontSize: 11,
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              if (isMine)
+                SizedBox(
+                  height: 24,
+                  width: 24,
+                  child: PopupMenuButton<String>(
+                    padding: EdgeInsets.zero,
+                    iconSize: 18,
+                    icon: const Icon(
+                      Icons.more_horiz,
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                    color: AppColors.surfaceContainerHigh,
+                    onSelected: (value) =>
+                        value == 'edit' ? onEdit() : onDelete(),
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(value: 'edit', child: Text('Düzenle')),
+                      PopupMenuItem(value: 'delete', child: Text('Sil')),
+                    ],
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 4),
-          Text(comment.text, style: AppTextStyles.bodyMd),
+          // Your own spoilers stay readable to you.
+          SpoilerText(
+            text: comment.text,
+            isSpoiler: comment.isSpoiler && !isMine,
+          ),
         ],
       ),
     );

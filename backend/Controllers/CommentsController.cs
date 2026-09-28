@@ -40,7 +40,7 @@ public class CommentsController(AppDbContext db, TitleCacheService titleCache, T
             return NotFound("User not found.");
         }
 
-        var comment = new Comment { UserId = request.UserId, TitleId = title.Id, Text = text };
+        var comment = new Comment { UserId = request.UserId, TitleId = title.Id, Text = text, IsSpoiler = request.IsSpoiler };
         db.Comments.Add(comment);
         await db.SaveChangesAsync(ct);
         return ToDto(comment, user, title);
@@ -58,6 +58,47 @@ public class CommentsController(AppDbContext db, TitleCacheService titleCache, T
         return comments.Select(c => ToDto(c, c.User!, c.Title!)).ToList();
     }
 
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult<CommentDto>> Update(int id, UpdateCommentRequest request, CancellationToken ct)
+    {
+        var text = request.Text.Trim();
+        if (string.IsNullOrEmpty(text))
+        {
+            return BadRequest("Yorum boş olamaz.");
+        }
+        if (text.Length > MaxLength)
+        {
+            text = text[..MaxLength];
+        }
+
+        var comment = await db.Comments
+            .Include(c => c.User)
+            .Include(c => c.Title)
+            .FirstOrDefaultAsync(c => c.Id == id && c.UserId == request.UserId, ct);
+        if (comment is null)
+        {
+            return NotFound();
+        }
+
+        if (comment.Text != text)
+        {
+            comment.EditedAt = DateTime.UtcNow;
+        }
+        comment.Text = text;
+        comment.IsSpoiler = request.IsSpoiler;
+        await db.SaveChangesAsync(ct);
+        return ToDto(comment, comment.User!, comment.Title!);
+    }
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id, [FromQuery] int userId, CancellationToken ct)
+    {
+        var deleted = await db.Comments
+            .Where(c => c.Id == id && c.UserId == userId)
+            .ExecuteDeleteAsync(ct);
+        return deleted == 0 ? NotFound() : NoContent();
+    }
+
     private CommentDto ToDto(Comment c, AppUser user, Title title) =>
-        new(c.Id, c.UserId, user.DisplayName, mapper.ToDto(title), c.Text, c.CreatedAt);
+        new(c.Id, c.UserId, user.DisplayName, mapper.ToDto(title), c.Text, c.CreatedAt, c.IsSpoiler, c.EditedAt);
 }

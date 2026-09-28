@@ -8,6 +8,10 @@ class CommentModel {
   final String text;
   final DateTime createdAt;
 
+  /// Hidden behind a tap-to-reveal for everyone but the author.
+  final bool isSpoiler;
+  final DateTime? editedAt;
+
   CommentModel({
     required this.id,
     required this.userId,
@@ -15,6 +19,8 @@ class CommentModel {
     required this.title,
     required this.text,
     required this.createdAt,
+    this.isSpoiler = false,
+    this.editedAt,
   });
 
   factory CommentModel.fromJson(Map<String, dynamic> json) => CommentModel(
@@ -24,5 +30,9 @@ class CommentModel {
         title: TitleModel.fromJson(json['title'] as Map<String, dynamic>),
         text: json['text'] as String,
         createdAt: DateTime.parse(json['createdAt'] as String),
+        isSpoiler: json['isSpoiler'] as bool? ?? false,
+        editedAt: json['editedAt'] == null
+            ? null
+            : DateTime.parse(json['editedAt'] as String),
       );
 }
