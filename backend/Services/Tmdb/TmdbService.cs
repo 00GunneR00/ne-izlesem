@@ -135,6 +135,9 @@ public class TmdbService(HttpClient httpClient, TmdbOptions options) : ITmdbServ
         return result;
     }
 
+    public Task<TmdbPagedResult<TmdbTitle>> GetRecommendationsAsync(MediaType mediaType, int tmdbId, CancellationToken ct = default) =>
+        GetTitlePageAsync($"{MediaSegment(mediaType)}/{tmdbId}/recommendations", ct);
+
     public async Task<List<TmdbVideo>> GetVideosAsync(MediaType mediaType, int tmdbId, CancellationToken ct = default)
     {
         // With a language set, TMDB only returns videos in that language —

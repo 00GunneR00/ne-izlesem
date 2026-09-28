@@ -9,6 +9,7 @@ public interface ITmdbService
     /// <summary>Popular titles; <paramref name="anyOfGenreIds"/> matches titles in *any* of the genres.</summary>
     Task<TmdbPagedResult<TmdbTitle>> DiscoverAsync(MediaType mediaType, IReadOnlyCollection<int>? anyOfGenreIds, int page = 1, int? providerId = null, CancellationToken ct = default);
     Task<TmdbTitle?> GetDetailsAsync(MediaType mediaType, int tmdbId, CancellationToken ct = default);
+    Task<TmdbPagedResult<TmdbTitle>> GetRecommendationsAsync(MediaType mediaType, int tmdbId, CancellationToken ct = default);
     Task<List<TmdbVideo>> GetVideosAsync(MediaType mediaType, int tmdbId, CancellationToken ct = default);
     Task<TmdbPagedResult<TmdbTitle>> SearchTitlesAsync(MediaType mediaType, string query, int page = 1, CancellationToken ct = default);
     Task<TmdbPagedResult<TmdbPerson>> SearchPeopleAsync(string query, int page = 1, CancellationToken ct = default);

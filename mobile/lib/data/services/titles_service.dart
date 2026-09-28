@@ -45,6 +45,25 @@ class TitlesService {
     return (response.data as List).map((e) => TitleModel.fromJson(e)).toList();
   }
 
+  /// "Senin İçin": titles similar to what the user rated/liked/watched.
+  /// Returns the items plus the seed titles they're based on (empty when
+  /// the backend fell back to preferred genres).
+  Future<({List<TitleModel> items, List<String> basedOn})> getRecommendations(
+    int userId,
+    MediaType mediaType,
+  ) async {
+    final response = await _dio.get(
+      '/recommendations',
+      queryParameters: {'userId': userId, 'mediaType': mediaType.apiValue},
+    );
+    return (
+      items: (response.data['items'] as List)
+          .map((e) => TitleModel.fromJson(e))
+          .toList(),
+      basedOn: (response.data['basedOn'] as List).cast<String>(),
+    );
+  }
+
   Future<List<TitleModel>> search(
     MediaType mediaType,
     String query, {

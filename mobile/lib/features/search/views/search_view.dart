@@ -299,13 +299,39 @@ class _SearchViewState extends State<SearchView> {
     );
   }
 
-  Widget _suggestionsLabel() => Padding(
-    padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, 0),
-    child: Text(
-      'Senin İçin Öneriler',
-      style: AppTextStyles.labelSm.copyWith(color: AppColors.onSurfaceVariant),
-    ),
-  );
+  Widget _suggestionsLabel() {
+    final because = controller.recommendedBecause;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Senin İçin Öneriler',
+            style: AppTextStyles.labelSm.copyWith(
+              color: AppColors.onSurfaceVariant,
+            ),
+          ),
+          if (because.isNotEmpty)
+            Text(
+              _becauseText(because),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.labelSm.copyWith(
+                fontSize: 11,
+                color: AppColors.onSurfaceVariant.withValues(alpha: 0.7),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _becauseText(List<String> names) {
+    final shown = names.take(2).join(', ');
+    final rest = names.length - 2;
+    return 'Beğendiğin yapımlara göre: $shown${rest > 0 ? ' +$rest' : ''}';
+  }
 
   Widget _personSearch() {
     return Column(

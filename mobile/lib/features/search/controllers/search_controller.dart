@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:get/get.dart';
 import '../../../core/constants/watch_providers.dart';
+import '../../../core/session/session_service.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/models/person_model.dart';
 import '../../../data/models/title_model.dart';
@@ -27,6 +28,10 @@ class AppSearchController extends GetxController {
   final RxList<PersonModel> personResults = <PersonModel>[].obs;
   final RxList<TitleModel> platformResults = <TitleModel>[].obs;
   final Rxn<WatchProvider> selectedProvider = Rxn<WatchProvider>();
+
+  /// Seed titles behind the "Senin İçin" list; empty when it's genre-based.
+  final RxList<String> recommendedBecause = <String>[].obs;
+  final SessionService _session = Get.find();
 
   @override
   void onInit() {
@@ -56,7 +61,24 @@ class AppSearchController extends GetxController {
   Future<void> _loadTitleSuggestions() async {
     isSearchActive.value = false;
     isLoading.value = true;
+    recommendedBecause.clear();
     try {
+      final userId = _session.userId.value;
+      if (userId != null) {
+        try {
+          final recs = await _titlesService.getRecommendations(
+            userId,
+            mediaType.value,
+          );
+          if (recs.items.isNotEmpty) {
+            titleResults.value = recs.items;
+            recommendedBecause.value = recs.basedOn;
+            return;
+          }
+        } catch (_) {
+          // Fall through to plain popular titles.
+        }
+      }
       final results = await _titlesService.discover(
         mediaType.value,
         page: 1 + _random.nextInt(15),
