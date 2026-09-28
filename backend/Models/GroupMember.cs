@@ -8,4 +8,7 @@ public class GroupMember
     public int UserId { get; set; }
     public AppUser? User { get; set; }
     public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>Matches newer than this are unread notifications for this member.</summary>
+    public DateTime? MatchesSeenAt { get; set; }
 }

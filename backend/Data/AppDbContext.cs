@@ -14,6 +14,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Comment> Comments => Set<Comment>();
     public DbSet<Group> Groups => Set<Group>();
     public DbSet<GroupMember> GroupMembers => Set<GroupMember>();
+    public DbSet<GroupSwipe> GroupSwipes => Set<GroupSwipe>();
+    public DbSet<GroupMatch> GroupMatches => Set<GroupMatch>();
     public DbSet<Suggestion> Suggestions => Set<Suggestion>();
     public DbSet<SuggestionRecipient> SuggestionRecipients => Set<SuggestionRecipient>();
 
@@ -51,6 +53,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<GroupMember>()
             .HasIndex(m => new { m.GroupId, m.UserId })
+            .IsUnique();
+
+        modelBuilder.Entity<GroupSwipe>()
+            .HasIndex(s => new { s.GroupId, s.UserId, s.TitleId })
+            .IsUnique();
+
+        modelBuilder.Entity<GroupMatch>()
+            .HasIndex(m => new { m.GroupId, m.TitleId })
             .IsUnique();
 
         modelBuilder.Entity<SuggestionRecipient>()

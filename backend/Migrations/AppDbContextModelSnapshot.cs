@@ -156,6 +156,33 @@ namespace Neizlesem.Api.Migrations
                     b.ToTable("Groups");
                 });
 
+            modelBuilder.Entity("Neizlesem.Api.Models.GroupMatch", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("GroupId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("MatchedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("TitleId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TitleId");
+
+                    b.HasIndex("GroupId", "TitleId")
+                        .IsUnique();
+
+                    b.ToTable("GroupMatches");
+                });
+
             modelBuilder.Entity("Neizlesem.Api.Models.GroupMember", b =>
                 {
                     b.Property<int>("Id")
@@ -170,6 +197,9 @@ namespace Neizlesem.Api.Migrations
                     b.Property<DateTime>("JoinedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("MatchesSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<int>("UserId")
                         .HasColumnType("integer");
 
@@ -181,6 +211,41 @@ namespace Neizlesem.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("GroupMembers");
+                });
+
+            modelBuilder.Entity("Neizlesem.Api.Models.GroupSwipe", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Direction")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("GroupId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("SwipedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("TitleId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TitleId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("GroupId", "UserId", "TitleId")
+                        .IsUnique();
+
+                    b.ToTable("GroupSwipes");
                 });
 
             modelBuilder.Entity("Neizlesem.Api.Models.LibraryEntry", b =>
@@ -435,6 +500,25 @@ namespace Neizlesem.Api.Migrations
                     b.Navigation("Owner");
                 });
 
+            modelBuilder.Entity("Neizlesem.Api.Models.GroupMatch", b =>
+                {
+                    b.HasOne("Neizlesem.Api.Models.Group", "Group")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Neizlesem.Api.Models.Title", "Title")
+                        .WithMany()
+                        .HasForeignKey("TitleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+
+                    b.Navigation("Title");
+                });
+
             modelBuilder.Entity("Neizlesem.Api.Models.GroupMember", b =>
                 {
                     b.HasOne("Neizlesem.Api.Models.Group", "Group")
@@ -450,6 +534,33 @@ namespace Neizlesem.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Group");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Neizlesem.Api.Models.GroupSwipe", b =>
+                {
+                    b.HasOne("Neizlesem.Api.Models.Group", "Group")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Neizlesem.Api.Models.Title", "Title")
+                        .WithMany()
+                        .HasForeignKey("TitleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Neizlesem.Api.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+
+                    b.Navigation("Title");
 
                     b.Navigation("User");
                 });

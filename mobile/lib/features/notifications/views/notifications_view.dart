@@ -1,5 +1,7 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../../core/routes/app_routes.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/suggestion_model.dart';
 import '../../social/controllers/social_controller.dart';
@@ -48,6 +50,7 @@ class NotificationsView extends GetView<SocialController> {
             padding: const EdgeInsets.all(AppSpacing.md),
             child: Obx(() {
               final hasAnything =
+                  controller.groupMatchNotifications.isNotEmpty ||
                   controller.incomingRequests.isNotEmpty ||
                   controller.suggestionInbox.isNotEmpty ||
                   controller.suggestionNotifications.isNotEmpty;
@@ -67,6 +70,10 @@ class NotificationsView extends GetView<SocialController> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (controller.groupMatchNotifications.isNotEmpty) ...[
+                    _groupMatchesSection(),
+                    const SizedBox(height: AppSpacing.lg),
+                  ],
                   if (controller.incomingRequests.isNotEmpty) ...[
                     _requestsSection(),
                     const SizedBox(height: AppSpacing.lg),
@@ -94,6 +101,54 @@ class NotificationsView extends GetView<SocialController> {
     border: Border.all(
       color: unread ? AppColors.primary.withValues(alpha: 0.6) : AppColors.outline,
     ),
+  );
+
+  Widget _groupMatchesSection() => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        'Grup Eşleşmeleri',
+        style: AppTextStyles.headlineMd.copyWith(fontSize: 18),
+      ),
+      const SizedBox(height: AppSpacing.sm),
+      for (final n in controller.groupMatchNotifications)
+        InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          onTap: () => Get.toNamed(AppRoutes.detail, arguments: n.title),
+          child: Container(
+            margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            decoration: _itemDecoration(unread: !n.seen),
+            child: Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                  child: SizedBox(
+                    width: 36,
+                    child: AspectRatio(
+                      aspectRatio: 2 / 3,
+                      child: n.title.posterUrl != null
+                          ? CachedNetworkImage(
+                              imageUrl: n.title.posterUrl!,
+                              fit: BoxFit.cover,
+                            )
+                          : Container(color: AppColors.surfaceContainer),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    'Eşleşme! 🎉 "${n.groupName}" grubunda herkes '
+                    '"${n.title.name}" izlemek istiyor.',
+                    style: AppTextStyles.bodyMd.copyWith(fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+    ],
   );
 
   Widget _requestsSection() => Column(

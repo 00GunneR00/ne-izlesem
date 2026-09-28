@@ -39,6 +39,8 @@ class SocialController extends GetxController {
       <SuggestionInboxItem>[].obs;
   final RxList<SuggestionNotification> suggestionNotifications =
       <SuggestionNotification>[].obs;
+  final RxList<GroupMatchNotification> groupMatchNotifications =
+      <GroupMatchNotification>[].obs;
   final RxMap<int, int> likeCounts = <int, int>{}.obs;
   final RxBool isLoading = true.obs;
   final RxBool isSearching = false.obs;
@@ -51,7 +53,8 @@ class SocialController extends GetxController {
 
   int get unseenNotificationCount =>
       incomingRequests.where((r) => !r.seen).length +
-      suggestionNotifications.where((n) => !n.seen).length;
+      suggestionNotifications.where((n) => !n.seen).length +
+      groupMatchNotifications.where((n) => !n.seen).length;
 
   @override
   void onInit() {
@@ -84,6 +87,9 @@ class SocialController extends GetxController {
         userId != null
             ? _suggestionsService.getNotifications(userId)
             : Future.value(<SuggestionNotification>[]),
+        userId != null
+            ? _groupsService.getMatchNotifications(userId)
+            : Future.value(<GroupMatchNotification>[]),
       ]);
       feed.value = results[0] as List<FeedItemModel>;
       trending.value = results[1] as List<TitleModel>;
@@ -93,6 +99,8 @@ class SocialController extends GetxController {
       suggestionInbox.value = results[5] as List<SuggestionInboxItem>;
       suggestionNotifications.value =
           results[6] as List<SuggestionNotification>;
+      groupMatchNotifications.value =
+          results[7] as List<GroupMatchNotification>;
       likeCounts.value = trending.isEmpty
           ? {}
           : await _likesService.getCounts(
@@ -158,6 +166,8 @@ class SocialController extends GetxController {
           _friendsService.markRequestsSeen(userId),
         if (suggestionNotifications.any((n) => !n.seen))
           _suggestionsService.markNotificationsSeen(userId),
+        if (groupMatchNotifications.any((n) => !n.seen))
+          _groupsService.markMatchesSeen(userId),
       ]);
     } catch (_) {
       Get.snackbar('Olmadı', 'Bildirimler güncellenemedi, tekrar dene.');
@@ -176,6 +186,9 @@ class SocialController extends GetxController {
           respondedAt: n.respondedAt,
           seen: true,
         ),
+    ];
+    groupMatchNotifications.value = [
+      for (final n in groupMatchNotifications) n.markedSeen(),
     ];
   }
 

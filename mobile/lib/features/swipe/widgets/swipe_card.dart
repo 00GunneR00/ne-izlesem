@@ -9,11 +9,15 @@ class SwipeCard extends StatefulWidget {
   final String? Function(int genreId) genreName;
   final void Function(SwipeDirection direction) onSwiped;
 
+  /// Stamp shown while dragging right; the group deck uses 'İZLEYELİM'.
+  final String likeLabel;
+
   const SwipeCard({
     super.key,
     required this.title,
     required this.genreName,
     required this.onSwiped,
+    this.likeLabel = 'İZLEDİM',
   });
 
   @override
@@ -232,7 +236,7 @@ class _SwipeCardState extends State<SwipeCard>
                 right: 24,
                 child: Opacity(
                   opacity: likeOpacity,
-                  child: _stampLabel('İZLEDİM', AppColors.primaryContainer),
+                  child: _stampLabel(widget.likeLabel, AppColors.primaryContainer),
                 ),
               ),
             ],
