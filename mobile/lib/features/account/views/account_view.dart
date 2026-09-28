@@ -1,0 +1,185 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../friends/views/friends_view.dart';
+import '../../groups/views/groups_view.dart';
+import '../../profile/controllers/profile_controller.dart';
+import '../../profile/views/profile_view.dart';
+import '../../social/controllers/social_controller.dart';
+
+/// Personal account page — who you are (name/username) and quick access to
+/// the counts that define your activity (watched/to-watch, friends, groups).
+/// Reached from the hamburger drawer. Reuses SocialController and
+/// ProfileController (both already alive via RootBinding) instead of
+/// duplicating their state.
+class AccountView extends GetView<SocialController> {
+  const AccountView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Profil')),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _header(),
+              const SizedBox(height: AppSpacing.xl),
+              Text(
+                'Aktivite',
+                style: AppTextStyles.headlineMd.copyWith(fontSize: 18),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _statsGrid(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _header() => Obx(() {
+    final me = controller.me.value;
+    final name = me?.displayName;
+    final initial = (name != null && name.isNotEmpty)
+        ? name[0].toUpperCase()
+        : '?';
+    return Row(
+      children: [
+        Container(
+          width: 76,
+          height: 76,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.surfaceContainerHigh,
+            border: Border.all(
+              color: AppColors.primaryContainer.withValues(alpha: 0.5),
+              width: 2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.glowPrimary,
+                blurRadius: 18,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+          child: Center(child: Text(initial, style: AppTextStyles.headlineLg)),
+        ),
+        const SizedBox(width: AppSpacing.md),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                name ?? 'Kullanıcı',
+                style: AppTextStyles.headlineLgMobile.copyWith(fontSize: 22),
+              ),
+              const SizedBox(height: 2),
+              if (me != null)
+                Text(
+                  '@${me.username}',
+                  style: AppTextStyles.bodyMd.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  });
+
+  Widget _statsGrid() {
+    final profile = Get.find<ProfileController>();
+    return Obx(
+      () => GridView.count(
+        crossAxisCount: 2,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        mainAxisSpacing: AppSpacing.sm,
+        crossAxisSpacing: AppSpacing.sm,
+        childAspectRatio: 2.1,
+        children: [
+          _statCard(
+            icon: Icons.check_circle_outline,
+            label: 'İzlenen',
+            value: profile.watchedCount,
+            onTap: () {
+              profile.changeMainTab(0);
+              Get.to(() => const ProfileView());
+            },
+          ),
+          _statCard(
+            icon: Icons.bookmark_outline,
+            label: 'İzleyeceğim',
+            value: profile.toWatchCount,
+            onTap: () {
+              profile.changeMainTab(1);
+              Get.to(() => const ProfileView());
+            },
+          ),
+          _statCard(
+            icon: Icons.people_outline,
+            label: 'Arkadaş',
+            value: controller.friends.length,
+            onTap: () => Get.to(() => const FriendsView()),
+          ),
+          _statCard(
+            icon: Icons.group_outlined,
+            label: 'Grup',
+            value: controller.groups.length,
+            onTap: () => Get.to(() => const GroupsView()),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _statCard({
+    required IconData icon,
+    required String label,
+    required int value,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceContainer,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: AppColors.outline),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: AppColors.primary, size: 22),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '$value',
+                    style: AppTextStyles.headlineMd.copyWith(fontSize: 20),
+                  ),
+                  Text(
+                    label,
+                    style: AppTextStyles.labelSm.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

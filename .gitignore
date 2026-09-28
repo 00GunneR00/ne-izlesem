@@ -1,0 +1,18 @@
+# Database dumps contain user data — keep them out of version control.
+backups/
+
+# Logs
+*.log
+
+# Local Claude Code settings
+.claude/settings.local.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vs/
+.vscode/
+
+# Showcase screen recordings/screenshots — large binaries, kept on disk only.
+showcase/public/clips/
+showcase/public/shots/

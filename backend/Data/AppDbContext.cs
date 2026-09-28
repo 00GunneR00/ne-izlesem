@@ -1,0 +1,64 @@
+using Microsoft.EntityFrameworkCore;
+using Neizlesem.Api.Models;
+
+namespace Neizlesem.Api.Data;
+
+public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+{
+    public DbSet<AppUser> Users => Set<AppUser>();
+    public DbSet<Title> Titles => Set<Title>();
+    public DbSet<LibraryEntry> LibraryEntries => Set<LibraryEntry>();
+    public DbSet<SwipeInteraction> SwipeInteractions => Set<SwipeInteraction>();
+    public DbSet<Friendship> Friendships => Set<Friendship>();
+    public DbSet<TitleLike> TitleLikes => Set<TitleLike>();
+    public DbSet<Comment> Comments => Set<Comment>();
+    public DbSet<Group> Groups => Set<Group>();
+    public DbSet<GroupMember> GroupMembers => Set<GroupMember>();
+    public DbSet<Suggestion> Suggestions => Set<Suggestion>();
+    public DbSet<SuggestionRecipient> SuggestionRecipients => Set<SuggestionRecipient>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Title>()
+            .HasIndex(t => new { t.TmdbId, t.MediaType })
+            .IsUnique();
+
+        modelBuilder.Entity<LibraryEntry>()
+            .HasIndex(e => new { e.UserId, e.TitleId })
+            .IsUnique();
+
+        modelBuilder.Entity<SwipeInteraction>()
+            .HasIndex(s => new { s.UserId, s.TitleId });
+
+        modelBuilder.Entity<AppUser>()
+            .HasIndex(u => u.Username)
+            .IsUnique();
+
+        modelBuilder.Entity<AppUser>()
+            .HasIndex(u => u.FriendCode)
+            .IsUnique();
+
+        modelBuilder.Entity<Friendship>()
+            .HasIndex(f => new { f.RequesterId, f.AddresseeId })
+            .IsUnique();
+
+        modelBuilder.Entity<TitleLike>()
+            .HasIndex(l => new { l.UserId, l.TitleId })
+            .IsUnique();
+
+        modelBuilder.Entity<Comment>()
+            .HasIndex(c => c.TitleId);
+
+        modelBuilder.Entity<GroupMember>()
+            .HasIndex(m => new { m.GroupId, m.UserId })
+            .IsUnique();
+
+        modelBuilder.Entity<SuggestionRecipient>()
+            .HasIndex(r => new { r.RecipientId, r.Status });
+
+        modelBuilder.Entity<Suggestion>()
+            .HasOne(s => s.Group)
+            .WithMany()
+            .OnDelete(DeleteBehavior.SetNull);
+    }
+}
