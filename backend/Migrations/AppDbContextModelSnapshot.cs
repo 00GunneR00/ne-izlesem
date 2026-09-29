@@ -197,6 +197,9 @@ namespace Neizlesem.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("Choice")
+                        .HasColumnType("integer");
+
                     b.Property<int>("GroupMatchId")
                         .HasColumnType("integer");
 

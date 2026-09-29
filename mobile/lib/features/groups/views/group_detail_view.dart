@@ -52,7 +52,7 @@ class GroupDetailView extends StatelessWidget {
                       'görünür.',
                     )
                   else
-                    _matchesGrid(controller),
+                    _matchesList(controller),
                 ] else ...[
                   if (controller.suggestions.isEmpty)
                     _emptyText(
@@ -168,10 +168,10 @@ class GroupDetailView extends StatelessWidget {
     );
   }
 
-  /// Matched titles as a 3-column poster grid, ranked by members' votes
-  /// (#1 gets 🏆 once it has a vote). Tap the vote chip to vote/un-vote.
-  Widget _matchesGrid(GroupDetailController controller) {
-    // Read here (inside the page's Obx) — itemBuilder runs later, untracked.
+  /// Matches as a ranked list: each row has İzleyelim / Kararsız /
+  /// İzlemeyelim on the right. Score = İzleyelim − İzlemeyelim; the top one
+  /// gets 🏆 once its score is positive.
+  Widget _matchesList(GroupDetailController controller) {
     final matches = controller.visibleMatches;
     final filter = controller.matchFilter.value;
     final busyIds = controller.voting.toSet();
@@ -199,7 +199,8 @@ class GroupDetailView extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.sm),
         Text(
-          'İzlemek istediklerine oy ver; en çok oy alan en üste çıkar.',
+          '👍 İzleyelim +1 · 🤔 Kararsız 0 · 👎 İzlemeyelim −1 — en yüksek '
+          'puanlı en üstte.',
           style: AppTextStyles.labelSm.copyWith(
             color: AppColors.onSurfaceVariant,
           ),
@@ -213,26 +214,17 @@ class GroupDetailView extends StatelessWidget {
                 : 'Henüz film eşleşmesi yok.',
           )
         else
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            padding: EdgeInsets.zero,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              mainAxisSpacing: AppSpacing.sm,
-              crossAxisSpacing: AppSpacing.sm,
-              childAspectRatio: 0.44,
-            ),
-            itemCount: matches.length,
-            itemBuilder: (context, index) => _matchTile(
+          for (var i = 0; i < matches.length; i++) ...[
+            _matchRow(
               controller,
-              matches[index],
-              rank: index + 1,
-              busy: busyIds.contains(matches[index].id),
+              matches[i],
+              rank: i + 1,
+              busy: busyIds.contains(matches[i].id),
               // In "Tümü", mark shows so they stand out from films.
               showTypeBadge: filter == null,
             ),
-          ),
+            const SizedBox(height: AppSpacing.xs),
+          ],
       ],
     );
   }
@@ -270,146 +262,158 @@ class GroupDetailView extends StatelessWidget {
     );
   }
 
-  Widget _matchTile(
+  Widget _matchRow(
     GroupDetailController controller,
     GroupMatch match, {
     required int rank,
     required bool busy,
     required bool showTypeBadge,
   }) {
-    final isTop = rank == 1 && match.voteCount > 0;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        GestureDetector(
-          onTap: () => Get.toNamed(AppRoutes.detail, arguments: match.title),
-          child: Stack(
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                  border: isTop
-                      ? Border.all(color: AppColors.primaryContainer, width: 2)
-                      : null,
-                  boxShadow: isTop
-                      ? [
-                          BoxShadow(
-                            color: AppColors.glowPrimary,
-                            blurRadius: 12,
-                          ),
-                        ]
-                      : null,
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                  child: AspectRatio(
-                    aspectRatio: 2 / 3,
-                    child: match.title.posterUrl != null
-                        ? CachedNetworkImage(
-                            imageUrl: match.title.posterUrl!,
-                            fit: BoxFit.cover,
-                          )
-                        : Container(color: AppColors.surfaceContainerLow),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 4,
-                left: 4,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isTop
-                        ? AppColors.primaryContainer
-                        : AppColors.background.withValues(alpha: 0.7),
-                    borderRadius: BorderRadius.circular(AppRadius.full),
-                  ),
-                  child: Text(
-                    isTop ? '🏆 #1' : '#$rank',
-                    style: AppTextStyles.labelSm.copyWith(
-                      fontSize: 10,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-              if (showTypeBadge && match.title.mediaType == MediaType.show)
-                Positioned(
-                  top: 4,
-                  right: 4,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.background.withValues(alpha: 0.7),
-                      borderRadius: BorderRadius.circular(AppRadius.full),
-                      border: Border.all(color: AppColors.primary, width: 1),
-                    ),
-                    child: Text(
-                      'Dizi',
-                      style: AppTextStyles.labelSm.copyWith(
-                        fontSize: 10,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
+    final isTop = rank == 1 && match.score > 0;
+    final year =
+        match.title.releaseDate != null && match.title.releaseDate!.length >= 4
+        ? match.title.releaseDate!.substring(0, 4)
+        : null;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainer,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(
+          color: isTop ? AppColors.primaryContainer : AppColors.outline,
         ),
-        const SizedBox(height: 4),
-        Text(
-          match.title.name,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: AppTextStyles.labelSm,
-        ),
-        const Spacer(),
-        SizedBox(
-          width: double.infinity,
-          height: 28,
-          child: Tooltip(
-            message: match.voters.isEmpty
-                ? 'Henüz oy yok'
-                : '${match.voters.join(', ')} oy verdi',
-            child: OutlinedButton.icon(
-              onPressed: busy ? null : () => controller.toggleVote(match),
-              style: OutlinedButton.styleFrom(
-                padding: EdgeInsets.zero,
-                backgroundColor: match.votedByMe
-                    ? AppColors.primaryContainer
-                    : Colors.transparent,
-                side: BorderSide(
-                  color: match.votedByMe
-                      ? AppColors.primaryContainer
-                      : AppColors.outline,
-                ),
-              ),
-              icon: Icon(
-                match.votedByMe
-                    ? Icons.thumb_up_alt
-                    : Icons.thumb_up_alt_outlined,
-                size: 14,
-                color: match.votedByMe ? Colors.white : AppColors.primary,
-              ),
-              label: Text(
-                '${match.voteCount}',
-                style: AppTextStyles.labelSm.copyWith(
-                  fontSize: 12,
-                  color: match.votedByMe ? Colors.white : AppColors.primary,
-                ),
+        boxShadow: isTop
+            ? [BoxShadow(color: AppColors.glowPrimary, blurRadius: 12)]
+            : null,
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 30,
+            child: Text(
+              isTop ? '🏆' : '#$rank',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.labelSm.copyWith(
+                fontSize: isTop ? 18 : 12,
+                color: AppColors.primary,
               ),
             ),
           ),
-        ),
-      ],
+          GestureDetector(
+            onTap: () => Get.toNamed(AppRoutes.detail, arguments: match.title),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              child: SizedBox(
+                width: 44,
+                height: 66,
+                child: match.title.posterUrl != null
+                    ? CachedNetworkImage(
+                        imageUrl: match.title.posterUrl!,
+                        fit: BoxFit.cover,
+                      )
+                    : Container(color: AppColors.surfaceContainerLow),
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () =>
+                  Get.toNamed(AppRoutes.detail, arguments: match.title),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    match.title.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.bodyMd.copyWith(fontSize: 14),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    [
+                      ?year,
+                      if (showTypeBadge &&
+                          match.title.mediaType == MediaType.show)
+                        'Dizi',
+                      'Puan ${match.score > 0 ? '+' : ''}${match.score}',
+                    ].join(' · '),
+                    style: AppTextStyles.labelSm.copyWith(
+                      fontSize: 11,
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '👍 ${match.yes.length}  🤔 ${match.maybe.length}  '
+                    '👎 ${match.no.length}',
+                    style: AppTextStyles.labelSm.copyWith(fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          for (final (vote, emoji, label) in const [
+            (MatchVote.yes, '👍', 'İzleyelim'),
+            (MatchVote.maybe, '🤔', 'Kararsız'),
+            (MatchVote.no, '👎', 'İzlemeyelim'),
+          ])
+            _voteButton(
+              emoji: emoji,
+              tooltip: _voteTooltip(label, match, vote),
+              selected: match.myVote == vote,
+              onTap: busy ? null : () => controller.vote(match, vote),
+            ),
+        ],
+      ),
     );
   }
+
+  String _voteTooltip(String label, GroupMatch match, MatchVote vote) {
+    final names = switch (vote) {
+      MatchVote.yes => match.yes,
+      MatchVote.maybe => match.maybe,
+      MatchVote.no => match.no,
+    };
+    return names.isEmpty ? label : '$label: ${names.join(', ')}';
+  }
+
+  Widget _voteButton({
+    required String emoji,
+    required String tooltip,
+    required bool selected,
+    required VoidCallback? onTap,
+  }) => Padding(
+    padding: const EdgeInsets.only(left: 4),
+    child: Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.full),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          width: 36,
+          height: 36,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: selected
+                ? AppColors.primaryContainer
+                : AppColors.surfaceContainerHigh,
+            border: Border.all(
+              color: selected ? AppColors.primaryContainer : AppColors.outline,
+            ),
+          ),
+          child: Opacity(
+            opacity: onTap == null ? 0.5 : 1,
+            child: Text(emoji, style: const TextStyle(fontSize: 16)),
+          ),
+        ),
+      ),
+    ),
+  );
 
   /// One card per suggested title: who suggested it, who's in, who passed,
   /// and "2/3 onay" progress. Everyone in → "🎉 Eşleşme".

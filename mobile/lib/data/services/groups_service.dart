@@ -66,11 +66,17 @@ class GroupsService {
     return (response.data as List).map((e) => GroupMatch.fromJson(e)).toList();
   }
 
-  /// Votes for a match, or takes the vote back; returns its new vote state.
-  Future<GroupMatch> toggleMatchVote(int groupId, int matchId, int userId) async {
+  /// Sets the user's vote on a match; the same vote again clears it.
+  /// Returns the match's new vote state.
+  Future<GroupMatch> voteOnMatch(
+    int groupId,
+    int matchId,
+    int userId,
+    MatchVote vote,
+  ) async {
     final response = await _dio.post(
       '/groups/$groupId/matches/$matchId/vote',
-      queryParameters: {'userId': userId},
+      queryParameters: {'userId': userId, 'choice': vote.apiValue},
     );
     return GroupMatch.fromJson(response.data);
   }

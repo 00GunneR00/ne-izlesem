@@ -151,20 +151,27 @@ public class GroupMatchesController(
             .Include(m => m.Votes).ThenInclude(v => v.User)
             .Where(m => m.GroupId == id)
             .ToListAsync(ct);
-        // Most-voted first ("Sıradaki film"); ties go to the newer match.
+        // Highest score first ("Sıradaki film"); ties → more İzleyelim, then newer.
         return matches
-            .OrderByDescending(m => m.Votes.Count)
+            .OrderByDescending(Score)
+            .ThenByDescending(m => m.Votes.Count(v => v.Choice == MatchVoteChoice.Yes))
             .ThenByDescending(m => m.MatchedAt)
             .Select(ToMatchDto(userId))
             .ToList();
     }
 
+    /// <summary>İzleyelim +1, Kararsız 0, İzlemeyelim −1.</summary>
+    private static int Score(GroupMatch m) =>
+        m.Votes.Count(v => v.Choice == MatchVoteChoice.Yes) - m.Votes.Count(v => v.Choice == MatchVoteChoice.No);
+
     /// <summary>
-    /// Toggles the member's vote on a match (vote again to take it back) and
-    /// returns the match's updated vote state.
+    /// Sets the member's vote on a match to <paramref name="choice"/>
+    /// (İzleyelim / Kararsız / İzlemeyelim); voting the same choice again
+    /// clears it. Returns the match's updated vote state.
     /// </summary>
     [HttpPost("{id:int}/matches/{matchId:int}/vote")]
-    public async Task<ActionResult<GroupMatchDto>> ToggleVote(int id, int matchId, [FromQuery] int userId, CancellationToken ct)
+    public async Task<ActionResult<GroupMatchDto>> Vote(
+        int id, int matchId, [FromQuery] int userId, [FromQuery] MatchVoteChoice choice, CancellationToken ct)
     {
         if (!await IsMemberAsync(id, userId, ct)
             || !await db.GroupMatches.AnyAsync(m => m.Id == matchId && m.GroupId == id, ct))
@@ -172,20 +179,29 @@ public class GroupMatchesController(
             return NotFound();
         }
 
-        var removed = await db.GroupMatchVotes
-            .Where(v => v.GroupMatchId == matchId && v.UserId == userId)
-            .ExecuteDeleteAsync(ct);
-        if (removed == 0)
+        var existing = await db.GroupMatchVotes
+            .FirstOrDefaultAsync(v => v.GroupMatchId == matchId && v.UserId == userId, ct);
+        if (existing is null)
         {
-            db.GroupMatchVotes.Add(new GroupMatchVote { GroupMatchId = matchId, UserId = userId });
-            try
-            {
-                await db.SaveChangesAsync(ct);
-            }
-            catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
-            {
-                // Double tap raced itself — the vote is in, which is what was asked.
-            }
+            db.GroupMatchVotes.Add(new GroupMatchVote { GroupMatchId = matchId, UserId = userId, Choice = choice });
+        }
+        else if (existing.Choice == choice)
+        {
+            db.GroupMatchVotes.Remove(existing);
+        }
+        else
+        {
+            existing.Choice = choice;
+            existing.VotedAt = DateTime.UtcNow;
+        }
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            // A double tap raced itself and the other request already
+            // recorded a vote; the returned state below reflects it.
         }
 
         var match = await db.GroupMatches
@@ -195,13 +211,23 @@ public class GroupMatchesController(
         return ToMatchDto(userId)(match);
     }
 
-    private Func<GroupMatch, GroupMatchDto> ToMatchDto(int userId) => m => new GroupMatchDto(
-        m.Id,
-        mapper.ToDto(m.Title!),
-        m.MatchedAt,
-        m.Votes.Count,
-        m.Votes.Any(v => v.UserId == userId),
-        m.Votes.OrderBy(v => v.VotedAt).Select(v => v.User!.DisplayName).ToList());
+    private Func<GroupMatch, GroupMatchDto> ToMatchDto(int userId) => m =>
+    {
+        List<string> Names(MatchVoteChoice c) => m.Votes
+            .Where(v => v.Choice == c)
+            .OrderBy(v => v.VotedAt)
+            .Select(v => v.User!.DisplayName)
+            .ToList();
+        return new GroupMatchDto(
+            m.Id,
+            mapper.ToDto(m.Title!),
+            m.MatchedAt,
+            Score(m),
+            Names(MatchVoteChoice.Yes),
+            Names(MatchVoteChoice.Maybe),
+            Names(MatchVoteChoice.No),
+            m.Votes.FirstOrDefault(v => v.UserId == userId)?.Choice);
+    };
 
     /// <summary>Recent matches across all of the user's groups, for the notifications page.</summary>
     [HttpGet("matches/notifications")]

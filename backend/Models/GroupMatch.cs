@@ -20,5 +20,6 @@ public class GroupMatchVote
     public GroupMatch? GroupMatch { get; set; }
     public int UserId { get; set; }
     public AppUser? User { get; set; }
+    public MatchVoteChoice Choice { get; set; } = MatchVoteChoice.Yes;
     public DateTime VotedAt { get; set; } = DateTime.UtcNow;
 }

@@ -37,22 +37,26 @@ class GroupDetailController extends GetxController {
   /// Match ids with a vote request in flight.
   final RxSet<int> voting = <int>{}.obs;
 
-  /// Vote / un-vote a match, then re-rank the same way the backend does
-  /// (most votes first, ties → newer match) so the grid reorders at once.
-  Future<void> toggleVote(GroupMatch match) async {
+  /// İzleyelim / Kararsız / İzlemeyelim (same choice again clears it), then
+  /// re-rank the way the backend does — score, then İzleyelim count, then
+  /// newer match — so the list reorders at once.
+  Future<void> vote(GroupMatch match, MatchVote choice) async {
     final userId = _session.userId.value;
     if (userId == null || !voting.add(match.id)) return;
     try {
-      final updated = await _groupsService.toggleMatchVote(
+      final updated = await _groupsService.voteOnMatch(
         groupId,
         match.id,
         userId,
+        choice,
       );
       final list = [
         for (final m in matches) m.id == updated.id ? updated : m,
       ]..sort((a, b) {
-          final byVotes = b.voteCount.compareTo(a.voteCount);
-          return byVotes != 0 ? byVotes : b.matchedAt.compareTo(a.matchedAt);
+          final byScore = b.score.compareTo(a.score);
+          if (byScore != 0) return byScore;
+          final byYes = b.yes.length.compareTo(a.yes.length);
+          return byYes != 0 ? byYes : b.matchedAt.compareTo(a.matchedAt);
         });
       matches.value = list;
     } catch (_) {

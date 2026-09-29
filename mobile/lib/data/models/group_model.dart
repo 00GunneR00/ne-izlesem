@@ -23,32 +23,61 @@ class GroupModel {
 }
 
 /// A title every member of the group swiped right on in "Birlikte Seç".
+/// A member's stance on a group match: İzleyelim (+1), Kararsız (0),
+/// İzlemeyelim (−1).
+enum MatchVote {
+  yes,
+  maybe,
+  no;
+
+  String get apiValue => switch (this) {
+        MatchVote.yes => 'Yes',
+        MatchVote.maybe => 'Maybe',
+        MatchVote.no => 'No',
+      };
+
+  static MatchVote? fromApi(String? value) => switch (value) {
+        'Yes' => MatchVote.yes,
+        'Maybe' => MatchVote.maybe,
+        'No' => MatchVote.no,
+        _ => null,
+      };
+}
+
 class GroupMatch {
   final int id;
   final TitleModel title;
   final DateTime matchedAt;
 
-  /// Members' votes to watch it — the backend orders matches by this.
-  final int voteCount;
-  final bool votedByMe;
-  final List<String> voters;
+  /// İzleyelim − İzlemeyelim; the backend ranks matches by this.
+  final int score;
+  final List<String> yes;
+  final List<String> maybe;
+  final List<String> no;
+
+  /// The current user's vote, if any.
+  final MatchVote? myVote;
 
   GroupMatch({
     required this.id,
     required this.title,
     required this.matchedAt,
-    this.voteCount = 0,
-    this.votedByMe = false,
-    this.voters = const [],
+    this.score = 0,
+    this.yes = const [],
+    this.maybe = const [],
+    this.no = const [],
+    this.myVote,
   });
 
   factory GroupMatch.fromJson(Map<String, dynamic> json) => GroupMatch(
         id: json['id'] as int,
         title: TitleModel.fromJson(json['title'] as Map<String, dynamic>),
         matchedAt: DateTime.parse(json['matchedAt'] as String),
-        voteCount: json['voteCount'] as int? ?? 0,
-        votedByMe: json['votedByMe'] as bool? ?? false,
-        voters: (json['voters'] as List?)?.cast<String>() ?? const [],
+        score: json['score'] as int? ?? 0,
+        yes: (json['yes'] as List?)?.cast<String>() ?? const [],
+        maybe: (json['maybe'] as List?)?.cast<String>() ?? const [],
+        no: (json['no'] as List?)?.cast<String>() ?? const [],
+        myVote: MatchVote.fromApi(json['myChoice'] as String?),
       );
 }
 
