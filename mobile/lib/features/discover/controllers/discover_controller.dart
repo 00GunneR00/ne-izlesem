@@ -123,10 +123,17 @@ class DiscoverController extends GetxController {
         }
       }
     } finally {
-      _isFetchingMore = false;
-      isLoading.value = false;
+      // A reset meanwhile owns the flags now — don't end its loading state.
+      if (token == _loadToken) {
+        _isFetchingMore = false;
+        isLoading.value = false;
+      }
     }
   }
+
+  /// Fresh feed from a new random page (same type/genre filters) — tapping
+  /// the Keşfet tab while already on it.
+  void refreshFeed() => _loadFeed(reset: true);
 
   /// Results come back popularity-sorted, so a low page number means more
   /// popular titles. Movies pick a start page uniformly. Shows skew the pick

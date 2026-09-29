@@ -118,8 +118,11 @@ class SwipeController extends GetxController {
         }
       }
     } finally {
-      _isFetchingMore = false;
-      isLoading.value = false;
+      // A reload meanwhile owns the flags now — don't end its loading state.
+      if (token == _loadToken) {
+        _isFetchingMore = false;
+        isLoading.value = false;
+      }
     }
   }
 
@@ -135,6 +138,7 @@ class SwipeController extends GetxController {
     queue.clear();
     _seenKeys.clear();
     _loadToken++;
+    _isFetchingMore = false; // an in-flight fetch is now stale
     _loadGenres();
     _loadMore();
   }
