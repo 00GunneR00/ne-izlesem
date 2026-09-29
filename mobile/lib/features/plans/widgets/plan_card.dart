@@ -287,12 +287,7 @@ class PlanOutcomeCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Nasıldı?',
-                  style: AppTextStyles.labelSm.copyWith(
-                    color: AppColors.primary,
-                  ),
-                ),
+                // The "Nasıldı?" section header already asks the question.
                 Text(
                   plan.title.name,
                   maxLines: 1,
