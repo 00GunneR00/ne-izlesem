@@ -8,6 +8,7 @@ import '../../groups/views/groups_view.dart';
 import '../../profile/controllers/profile_controller.dart';
 import '../../profile/views/profile_view.dart';
 import '../../social/controllers/social_controller.dart';
+import '../widgets/delete_account_sheet.dart';
 
 /// Personal account page — who you are (name/username) and quick access to
 /// the counts that define your activity (watched/to-watch, friends, groups).
@@ -44,6 +45,13 @@ class AccountView extends GetView<SocialController> {
               _genrePreferencesTile(),
               const SizedBox(height: AppSpacing.xl),
               _dataAttribution(),
+              const SizedBox(height: AppSpacing.xl),
+              Text(
+                'Hesap',
+                style: AppTextStyles.headlineMd.copyWith(fontSize: 18),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _deleteAccountTile(),
             ],
           ),
         ),
@@ -185,6 +193,41 @@ class AccountView extends GetView<SocialController> {
                     ),
                   );
                 }),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right, color: AppColors.onSurfaceVariant),
+        ],
+      ),
+    ),
+  );
+
+  /// Google Play requires in-app account deletion.
+  Widget _deleteAccountTile() => InkWell(
+    borderRadius: BorderRadius.circular(AppRadius.lg),
+    onTap: DeleteAccountSheet.show,
+    child: Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainer,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.outline),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.delete_forever_outlined, color: AppColors.primaryContainer),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Hesabımı Sil', style: AppTextStyles.bodyMd),
+                Text(
+                  'Hesabın ve tüm verilerin kalıcı olarak silinir',
+                  style: AppTextStyles.labelSm.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
               ],
             ),
           ),

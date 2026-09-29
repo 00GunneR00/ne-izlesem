@@ -63,17 +63,11 @@ class OnboardingController extends GetxController {
     if (!canContinue) return;
     isSubmitting.value = true;
     try {
-      var userId = _session.userId.value;
+      final userId = _session.userId.value;
       if (userId == null) {
-        // Fallback for reaching onboarding without registering first.
-        final deviceTag = DateTime.now().microsecondsSinceEpoch;
-        final user = await _userService.createOrGet(
-          'device-$deviceTag@neizlesem.local',
-          'Misafir Kullanıcı',
-          'misafir$deviceTag',
-        );
-        userId = user.id;
-        await _session.setUserId(userId);
+        // Signed out meanwhile (token expired) → sign in again.
+        Get.offAllNamed(AppRoutes.login);
+        return;
       }
       await _userService.updatePreferredGenres(userId, selectedGenreIds.toList());
       if (isEditing) {

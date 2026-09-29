@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Neizlesem.Api.DTOs;
 using Neizlesem.Api.Models;
@@ -17,6 +18,8 @@ public class TitlesController(ITmdbService tmdb, TitleMapper mapper, SwipeDeckSe
         return genres.Select(g => new GenreDto(g.Id, g.Name)).ToList();
     }
 
+    /// <summary>Public: also feeds the poster wall on the sign-in screen (before a token exists).</summary>
+    [AllowAnonymous]
     [HttpGet("trending")]
     public async Task<ActionResult<List<TitleDto>>> GetTrending(
         [FromQuery] MediaType mediaType, [FromQuery] int page = 1, CancellationToken ct = default)
