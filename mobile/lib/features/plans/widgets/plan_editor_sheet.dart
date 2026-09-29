@@ -120,7 +120,7 @@ class _PlanEditorSheetState extends State<_PlanEditorSheet> {
     setState(() => _saving = false);
     if (plan != null) {
       Get.back();
-      // Tapping it (or "Takip'te gör") jumps to the plan in Takip.
+      // Tapping it (or "Planı gör") jumps to the plan on the Plan tab.
       void showInTakip() {
         Get.closeCurrentSnackbar();
         openPlan(plan);
@@ -135,7 +135,7 @@ class _PlanEditorSheetState extends State<_PlanEditorSheet> {
         onTap: (_) => showInTakip(),
         mainButton: TextButton(
           onPressed: showInTakip,
-          child: const Text("Takip'te gör"),
+          child: const Text('Planı gör'),
         ),
       );
     }

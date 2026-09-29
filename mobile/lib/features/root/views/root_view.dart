@@ -15,7 +15,7 @@ class RootView extends GetView<RootController> {
   static const _tabs = [
     (icon: Icons.swipe, label: 'Swipe'),
     (icon: Icons.explore, label: 'Keşfet'),
-    (icon: Icons.track_changes, label: 'Takip'),
+    (icon: Icons.event_note, label: 'Plan'),
     (icon: Icons.search, label: 'Arama'),
     (icon: Icons.group, label: 'Sosyal'),
   ];

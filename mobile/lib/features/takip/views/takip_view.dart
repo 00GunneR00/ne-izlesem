@@ -205,7 +205,7 @@ class TakipView extends GetView<TakipController> {
           ),
           Expanded(
             child: Text(
-              'Takip',
+              'Plan',
               textAlign: TextAlign.center,
               style: AppTextStyles.headlineLgMobile.copyWith(
                 color: AppColors.primary,
