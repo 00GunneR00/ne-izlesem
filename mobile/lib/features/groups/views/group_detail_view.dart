@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../data/models/enums.dart';
 import '../../../data/models/group_model.dart';
 import '../../../data/models/suggestion_model.dart';
 import '../controllers/group_detail_controller.dart';
@@ -170,12 +171,33 @@ class GroupDetailView extends StatelessWidget {
   /// Matched titles as a 3-column poster grid, ranked by members' votes
   /// (#1 gets 🏆 once it has a vote). Tap the vote chip to vote/un-vote.
   Widget _matchesGrid(GroupDetailController controller) {
-    final matches = controller.matches;
     // Read here (inside the page's Obx) — itemBuilder runs later, untracked.
+    final matches = controller.visibleMatches;
+    final filter = controller.matchFilter.value;
     final busyIds = controller.voting.toSet();
+    final movieCount = controller.matches
+        .where((m) => m.title.mediaType == MediaType.movie)
+        .length;
+    final showCount = controller.matches.length - movieCount;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        SizedBox(
+          height: 32,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              _filterChip(
+                controller,
+                'Tümü · ${controller.matches.length}',
+                null,
+              ),
+              _filterChip(controller, 'Filmler · $movieCount', MediaType.movie),
+              _filterChip(controller, 'Diziler · $showCount', MediaType.show),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
         Text(
           'İzlemek istediklerine oy ver; en çok oy alan en üste çıkar.',
           style: AppTextStyles.labelSm.copyWith(
@@ -183,25 +205,68 @@ class GroupDetailView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          padding: EdgeInsets.zero,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            mainAxisSpacing: AppSpacing.sm,
-            crossAxisSpacing: AppSpacing.sm,
-            childAspectRatio: 0.44,
+        if (matches.isEmpty)
+          _emptyText(
+            filter == MediaType.show
+                ? 'Henüz dizi eşleşmesi yok. "Birlikte Seç"te Dizi\'ye geçip '
+                      'kaydırın.'
+                : 'Henüz film eşleşmesi yok.',
+          )
+        else
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: EdgeInsets.zero,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              mainAxisSpacing: AppSpacing.sm,
+              crossAxisSpacing: AppSpacing.sm,
+              childAspectRatio: 0.44,
+            ),
+            itemCount: matches.length,
+            itemBuilder: (context, index) => _matchTile(
+              controller,
+              matches[index],
+              rank: index + 1,
+              busy: busyIds.contains(matches[index].id),
+              // In "Tümü", mark shows so they stand out from films.
+              showTypeBadge: filter == null,
+            ),
           ),
-          itemCount: matches.length,
-          itemBuilder: (context, index) => _matchTile(
-            controller,
-            matches[index],
-            rank: index + 1,
-            busy: busyIds.contains(matches[index].id),
+      ],
+    );
+  }
+
+  Widget _filterChip(
+    GroupDetailController controller,
+    String label,
+    MediaType? type,
+  ) {
+    final selected = controller.matchFilter.value == type;
+    return Padding(
+      padding: const EdgeInsets.only(right: AppSpacing.xs),
+      child: GestureDetector(
+        onTap: () => controller.setMatchFilter(type),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: 6,
+          ),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.surfaceVariant : Colors.transparent,
+            borderRadius: BorderRadius.circular(AppRadius.full),
+            border: Border.all(color: AppColors.outline),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: AppTextStyles.labelSm.copyWith(
+                color: selected ? AppColors.onSurface : AppColors.secondary,
+              ),
+            ),
           ),
         ),
-      ],
+      ),
     );
   }
 
@@ -210,6 +275,7 @@ class GroupDetailView extends StatelessWidget {
     GroupMatch match, {
     required int rank,
     required bool busy,
+    required bool showTypeBadge,
   }) {
     final isTop = rank == 1 && match.voteCount > 0;
     return Column(
@@ -270,6 +336,29 @@ class GroupDetailView extends StatelessWidget {
                   ),
                 ),
               ),
+              if (showTypeBadge && match.title.mediaType == MediaType.show)
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.background.withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(AppRadius.full),
+                      border: Border.all(color: AppColors.primary, width: 1),
+                    ),
+                    child: Text(
+                      'Dizi',
+                      style: AppTextStyles.labelSm.copyWith(
+                        fontSize: 10,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),

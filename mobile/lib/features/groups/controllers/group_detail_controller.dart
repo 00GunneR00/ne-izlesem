@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import '../../../core/session/session_service.dart';
+import '../../../data/models/enums.dart';
 import '../../../data/models/group_model.dart';
 import '../../../data/models/suggestion_model.dart';
 import '../../../data/services/groups_service.dart';
@@ -19,6 +20,19 @@ class GroupDetailController extends GetxController {
   final RxInt selectedTab = 0.obs;
 
   void selectTab(int index) => selectedTab.value = index;
+
+  /// Eşleşmeler filter: null = Tümü, else only films / only shows. Ranking
+  /// (#1, #2…) is within the filtered list.
+  final Rxn<MediaType> matchFilter = Rxn<MediaType>();
+
+  void setMatchFilter(MediaType? type) => matchFilter.value = type;
+
+  List<GroupMatch> get visibleMatches {
+    final filter = matchFilter.value;
+    return filter == null
+        ? matches
+        : matches.where((m) => m.title.mediaType == filter).toList();
+  }
 
   /// Match ids with a vote request in flight.
   final RxSet<int> voting = <int>{}.obs;
