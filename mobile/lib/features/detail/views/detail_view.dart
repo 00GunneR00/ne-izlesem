@@ -10,6 +10,7 @@ import '../../../data/models/comment_model.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/models/person_model.dart';
 import '../../lists/widgets/add_to_list_sheet.dart';
+import '../../plans/widgets/plan_editor_sheet.dart';
 import '../../search/views/person_filmography_view.dart';
 import '../../social/widgets/animated_like_icon.dart';
 import '../../social/widgets/suggest_dialog.dart';
@@ -202,6 +203,11 @@ class DetailView extends GetView<DetailController> {
                                 onPressed: () => showAddToListSheet(title),
                                 icon: const Icon(Icons.playlist_add),
                                 label: const Text('Listeye Ekle'),
+                              ),
+                              TextButton.icon(
+                                onPressed: () => showPlanEditor(title),
+                                icon: const Icon(Icons.event_available),
+                                label: const Text('Planla'),
                               ),
                             ],
                           ),

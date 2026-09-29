@@ -4,6 +4,8 @@ import 'package:get/get.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/suggestion_model.dart';
+import '../../plans/controllers/plans_controller.dart';
+import '../../plans/widgets/plan_card.dart';
 import '../../social/controllers/social_controller.dart';
 import '../../social/widgets/dismissible_action.dart';
 import '../../social/widgets/suggestion_card.dart';
@@ -61,7 +63,11 @@ class NotificationsView extends GetView<SocialController> {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(AppSpacing.md),
             child: Obx(() {
+              final plans = Get.find<PlansController>();
+              final invites = plans.pendingInvites;
+              plans.busy.length; // tracked for the RSVP buttons' busy state
               final hasAnything =
+                  invites.isNotEmpty ||
                   controller.groupMatchNotifications.isNotEmpty ||
                   controller.incomingRequests.isNotEmpty ||
                   controller.suggestionInbox.isNotEmpty ||
@@ -82,6 +88,20 @@ class NotificationsView extends GetView<SocialController> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Waiting for Katılıyorum / Belki / Gelemem — answering
+                  // moves them to Takip's plans.
+                  if (invites.isNotEmpty) ...[
+                    Text(
+                      'Plan Davetleri',
+                      style: AppTextStyles.headlineMd.copyWith(fontSize: 18),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    for (final p in invites) ...[
+                      PlanCard(plan: p),
+                      const SizedBox(height: AppSpacing.xs),
+                    ],
+                    const SizedBox(height: AppSpacing.lg),
+                  ],
                   if (controller.groupMatchNotifications.isNotEmpty) ...[
                     _groupMatchesSection(),
                     const SizedBox(height: AppSpacing.lg),
@@ -111,7 +131,9 @@ class NotificationsView extends GetView<SocialController> {
     color: AppColors.surfaceContainerLow,
     borderRadius: BorderRadius.circular(AppRadius.md),
     border: Border.all(
-      color: unread ? AppColors.primary.withValues(alpha: 0.6) : AppColors.outline,
+      color: unread
+          ? AppColors.primary.withValues(alpha: 0.6)
+          : AppColors.outline,
     ),
   );
 

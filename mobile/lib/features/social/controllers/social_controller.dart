@@ -16,6 +16,7 @@ import '../../../data/services/suggestions_service.dart';
 import '../../../data/services/titles_service.dart';
 import '../../../data/services/user_service.dart';
 import '../../lists/controllers/lists_controller.dart';
+import '../../plans/controllers/plans_controller.dart';
 
 class SocialController extends GetxController {
   final TitlesService _titlesService = TitlesService();
@@ -52,10 +53,13 @@ class SocialController extends GetxController {
 
   int? get _userId => _session.userId.value;
 
+  /// Plan invitations still waiting for Katılıyorum / Belki / Gelemem also
+  /// light up the bell until answered (like friend requests).
   int get unseenNotificationCount =>
       incomingRequests.where((r) => !r.seen).length +
       suggestionNotifications.where((n) => !n.seen).length +
-      groupMatchNotifications.where((n) => !n.seen).length;
+      groupMatchNotifications.where((n) => !n.seen).length +
+      Get.find<PlansController>().pendingInvites.length;
 
   @override
   void onInit() {
@@ -73,6 +77,7 @@ class SocialController extends GetxController {
   Future<void> reload() async {
     final userId = _userId;
     isLoading.value = true;
+    Get.find<PlansController>().reload(); // plan invites (bell + notifications)
     try {
       me.value = userId != null ? await _userService.getById(userId) : null;
       final results = await Future.wait([

@@ -17,6 +17,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<GroupSwipe> GroupSwipes => Set<GroupSwipe>();
     public DbSet<GroupMatch> GroupMatches => Set<GroupMatch>();
     public DbSet<GroupMatchVote> GroupMatchVotes => Set<GroupMatchVote>();
+    public DbSet<WatchPlan> WatchPlans => Set<WatchPlan>();
+    public DbSet<PlanAttendee> PlanAttendees => Set<PlanAttendee>();
     public DbSet<UserList> UserLists => Set<UserList>();
     public DbSet<UserListItem> UserListItems => Set<UserListItem>();
     public DbSet<Suggestion> Suggestions => Set<Suggestion>();
@@ -75,6 +77,26 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .WithOne(v => v.GroupMatch)
             .HasForeignKey(v => v.GroupMatchId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<WatchPlan>()
+            .HasMany(p => p.Attendees)
+            .WithOne(a => a.Plan)
+            .HasForeignKey(a => a.PlanId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // A deleted group keeps its plans (attendees still want them), just
+        // without the group label.
+        modelBuilder.Entity<WatchPlan>()
+            .HasOne(p => p.Group)
+            .WithMany()
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<WatchPlan>()
+            .HasIndex(p => p.ScheduledAt);
+
+        modelBuilder.Entity<PlanAttendee>()
+            .HasIndex(a => new { a.PlanId, a.UserId })
+            .IsUnique();
 
         modelBuilder.Entity<UserList>()
             .HasMany(l => l.Items)

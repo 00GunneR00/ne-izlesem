@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import '../../discover/controllers/discover_controller.dart';
 import '../../lists/controllers/lists_controller.dart';
+import '../../plans/controllers/plans_controller.dart';
 import '../../profile/controllers/profile_controller.dart';
 import '../../search/controllers/search_controller.dart';
 import '../../social/controllers/social_controller.dart';
@@ -26,6 +27,8 @@ class RootBinding extends Bindings {
     // Also used from pushed pages (detail's "Listeye Ekle", list detail),
     // so re-create on demand like ProfileController.
     Get.lazyPut(() => ListsController(), fenix: true);
+    // Takip, notifications (plan invites) and the "Planla" sheet share it.
+    Get.lazyPut(() => PlansController(), fenix: true);
     Get.lazyPut(() => AppSearchController());
   }
 }

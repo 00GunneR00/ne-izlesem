@@ -6,9 +6,10 @@ import '../../../data/models/library_entry_model.dart';
 import '../../../data/models/tracking_model.dart';
 import '../../../data/services/library_service.dart';
 import '../../../data/services/tracking_service.dart';
+import '../../plans/controllers/plans_controller.dart';
 
-/// Takip tab: shows in progress, new/upcoming episodes, unreleased titles on
-/// the watchlist, group matches. Refreshed whenever the tab is selected.
+/// Takip tab: watch plans (via PlansController), a "Bu Hafta" calendar of
+/// plans / new episodes / releases, and shows in progress. Refreshed on every visit.
 class TakipController extends GetxController {
   final TrackingService _trackingService = TrackingService();
   final LibraryService _libraryService = LibraryService();
@@ -21,6 +22,11 @@ class TakipController extends GetxController {
   /// Entry ids with a "Sonraki" request in flight (disables the button).
   final RxSet<int> advancing = <int>{}.obs;
 
+  /// "Bu Hafta" strip: days from today (0 = bugün … 6).
+  final RxInt selectedDay = 0.obs;
+
+  void selectDay(int offset) => selectedDay.value = offset;
+
   @override
   void onInit() {
     super.onInit();
@@ -30,6 +36,8 @@ class TakipController extends GetxController {
   Future<void> reload() async {
     final userId = _session.userId.value;
     if (userId == null) return;
+    // Plans live in their own controller (also used by notifications).
+    Get.find<PlansController>().reload();
     // Spinner only on the first load; later refreshes update in place.
     isLoading.value = tracking.value == null;
     try {

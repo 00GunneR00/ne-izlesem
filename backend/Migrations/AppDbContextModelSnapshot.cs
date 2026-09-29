@@ -329,6 +329,39 @@ namespace Neizlesem.Api.Migrations
                     b.ToTable("LibraryEntries");
                 });
 
+            modelBuilder.Entity("Neizlesem.Api.Models.PlanAttendee", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("Outcome")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PlanId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("RespondedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Response")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("PlanId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("PlanAttendees");
+                });
+
             modelBuilder.Entity("Neizlesem.Api.Models.Suggestion", b =>
                 {
                     b.Property<int>("Id")
@@ -566,6 +599,45 @@ namespace Neizlesem.Api.Migrations
                     b.ToTable("UserListItems");
                 });
 
+            modelBuilder.Entity("Neizlesem.Api.Models.WatchPlan", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("CreatorId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("GroupId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("ScheduledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("TitleId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatorId");
+
+                    b.HasIndex("GroupId");
+
+                    b.HasIndex("ScheduledAt");
+
+                    b.HasIndex("TitleId");
+
+                    b.ToTable("WatchPlans");
+                });
+
             modelBuilder.Entity("Neizlesem.Api.Models.Comment", b =>
                 {
                     b.HasOne("Neizlesem.Api.Models.Title", "Title")
@@ -718,6 +790,25 @@ namespace Neizlesem.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Neizlesem.Api.Models.PlanAttendee", b =>
+                {
+                    b.HasOne("Neizlesem.Api.Models.WatchPlan", "Plan")
+                        .WithMany("Attendees")
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Neizlesem.Api.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Plan");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Neizlesem.Api.Models.Suggestion", b =>
                 {
                     b.HasOne("Neizlesem.Api.Models.Group", "Group")
@@ -831,6 +922,32 @@ namespace Neizlesem.Api.Migrations
                     b.Navigation("Title");
                 });
 
+            modelBuilder.Entity("Neizlesem.Api.Models.WatchPlan", b =>
+                {
+                    b.HasOne("Neizlesem.Api.Models.AppUser", "Creator")
+                        .WithMany()
+                        .HasForeignKey("CreatorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Neizlesem.Api.Models.Group", "Group")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Neizlesem.Api.Models.Title", "Title")
+                        .WithMany()
+                        .HasForeignKey("TitleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Creator");
+
+                    b.Navigation("Group");
+
+                    b.Navigation("Title");
+                });
+
             modelBuilder.Entity("Neizlesem.Api.Models.GroupMatch", b =>
                 {
                     b.Navigation("Votes");
@@ -844,6 +961,11 @@ namespace Neizlesem.Api.Migrations
             modelBuilder.Entity("Neizlesem.Api.Models.UserList", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("Neizlesem.Api.Models.WatchPlan", b =>
+                {
+                    b.Navigation("Attendees");
                 });
 #pragma warning restore 612, 618
         }

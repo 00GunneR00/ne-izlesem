@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/models/group_model.dart';
 import '../../../data/models/suggestion_model.dart';
+import '../../plans/widgets/plan_editor_sheet.dart';
 import '../controllers/group_detail_controller.dart';
 import 'group_swipe_view.dart';
 
@@ -206,6 +207,25 @@ class GroupDetailView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
+        // Voted → planned: the current #1 as a film night for this group.
+        if (matches.isNotEmpty) ...[
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: () => showPlanEditor(
+                matches.first.title,
+                groupId: controller.groupId,
+              ),
+              icon: const Icon(Icons.event_available),
+              label: Text(
+                '${matches.first.title.name} için film gecesi planla',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+        ],
         if (matches.isEmpty)
           _emptyText(
             filter == MediaType.show

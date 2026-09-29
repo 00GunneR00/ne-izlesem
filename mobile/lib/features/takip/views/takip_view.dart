@@ -4,11 +4,14 @@ import 'package:get/get.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/glass_container.dart';
-import '../../../data/models/group_model.dart';
+import '../../../core/utils/plan_time.dart';
 import '../../../data/models/library_entry_model.dart';
+import '../../../data/models/plan_model.dart';
 import '../../../data/models/title_model.dart';
 import '../../../data/models/tracking_model.dart';
 import '../../account/widgets/app_drawer.dart';
+import '../../plans/controllers/plans_controller.dart';
+import '../../plans/widgets/plan_card.dart';
 import '../../social/widgets/notification_bell.dart';
 import '../controllers/takip_controller.dart';
 
@@ -27,30 +30,23 @@ const _months = [
   'Ara',
 ];
 
-/// "Bugün", "Dün", "3 gün önce", "2 gün sonra", or "12 Eki" further out.
-String _relativeDay(DateTime date) {
-  final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
-  final days = DateTime(
-    date.year,
-    date.month,
-    date.day,
-  ).difference(today).inDays;
-  if (days == 0) return 'Bugün';
-  if (days == -1) return 'Dün';
-  if (days == 1) return 'Yarın';
-  if (days < 0 && days >= -7) return '${-days} gün önce';
-  if (days > 0 && days <= 7) return '$days gün sonra';
-  return '${date.day} ${_months[date.month - 1]}';
+/// One entry in the "Bu Hafta" calendar.
+class _DayEvent {
+  const _DayEvent(this.icon, this.text, this.title);
+  final String icon;
+  final String text;
+  final TitleModel title;
 }
 
-/// The personal "what's on for me" board: shows in progress, new episodes,
-/// watchlist titles not out yet, and group matches.
+/// Takip: "Nasıldı?" for started plans, the next plan, a 7-day calendar
+/// (plans, new episodes, releases), other upcoming plans, and shows in
+/// progress.
 class TakipView extends GetView<TakipController> {
   const TakipView({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final plans = Get.find<PlansController>();
     return Scaffold(
       drawer: const AppDrawer(),
       body: SafeArea(
@@ -63,17 +59,15 @@ class TakipView extends GetView<TakipController> {
                 onRefresh: controller.reload,
                 color: AppColors.primary,
                 child: Obx(() {
-                  if (controller.isLoading.value) {
+                  if (controller.isLoading.value && plans.isLoading.value) {
                     return const Center(child: CircularProgressIndicator());
                   }
                   final data = controller.tracking.value;
-                  if (data == null) {
-                    return _message(
-                      controller.hasError.value
-                          ? 'Takip bilgileri yüklenemedi. Aşağı çekip tekrar dene.'
-                          : 'Yükleniyor...',
-                    );
-                  }
+                  final outcome = plans.needsOutcome;
+                  final next = plans.nextPlan;
+                  final others = plans.upcoming.skip(1).toList();
+                  // Read here so Obx tracks busy state used inside cards.
+                  plans.busy.length;
                   return ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     // Bottom padding clears the floating nav bar.
@@ -84,55 +78,58 @@ class TakipView extends GetView<TakipController> {
                       110,
                     ),
                     children: [
-                      _section(
-                        'İzlemeye Devam Et',
-                        Icons.play_circle_outline,
-                        data.continueWatching.isEmpty
-                            ? _hint(
-                                'Bir dizinin detayından "Dizi Takibi" ile '
-                                'bölüm işaretlediğinde burada görünür.',
-                              )
-                            : _continueStrip(data.continueWatching),
-                      ),
-                      _section(
-                        'Yeni Bölümler',
-                        Icons.live_tv,
-                        data.newEpisodes.isEmpty
-                            ? _hint(
-                                'Takip ettiğin dizilerde bu hafta çıkan ya da '
-                                'önümüzdeki 30 günde çıkacak bölüm yok.',
-                              )
-                            : Column(
-                                children: [
-                                  for (final e in data.newEpisodes)
-                                    _NewEpisodeTile(item: e),
+                      if (outcome.isNotEmpty)
+                        _section(
+                          'Nasıldı?',
+                          Icons.rate_review_outlined,
+                          _padded(
+                            Column(
+                              children: [
+                                for (final p in outcome) ...[
+                                  PlanOutcomeCard(plan: p),
+                                  const SizedBox(height: AppSpacing.xs),
                                 ],
-                              ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      _section(
+                        'Sıradaki Plan',
+                        Icons.alarm,
+                        next == null
+                            ? _hint(
+                                'Henüz bir planın yok. Bir film ya da dizinin '
+                                'detayından "Planla"ya dokun; tek başına, grupla '
+                                'ya da arkadaşlarınla.',
+                              )
+                            : _padded(PlanCard(plan: next, highlight: true)),
                       ),
                       _section(
-                        'Yakında Vizyonda',
-                        Icons.event,
-                        data.upcoming.isEmpty
-                            ? _hint(
-                                'İzleyeceğim listende henüz çıkmamış bir yapım yok.',
-                              )
-                            : Column(
-                                children: [
-                                  for (final u in data.upcoming)
-                                    _UpcomingTile(item: u),
+                        'Bu Hafta',
+                        Icons.calendar_month_outlined,
+                        _weekCalendar(plans, data),
+                      ),
+                      if (others.isNotEmpty)
+                        _section(
+                          'Planlarım',
+                          Icons.event_note_outlined,
+                          _padded(
+                            Column(
+                              children: [
+                                for (final p in others) ...[
+                                  PlanCard(plan: p),
+                                  const SizedBox(height: AppSpacing.xs),
                                 ],
-                              ),
-                      ),
-                      _section(
-                        'Grup Eşleşmeleri',
-                        Icons.celebration_outlined,
-                        data.groupMatches.isEmpty
-                            ? _hint(
-                                'Bir grupta "Birlikte Seç" ile kaydırın; '
-                                'herkesin beğendiği yapımlar burada görünür.',
-                              )
-                            : _matchesStrip(data.groupMatches),
-                      ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      if (data != null && data.continueWatching.isNotEmpty)
+                        _section(
+                          'İzlemeye Devam Et',
+                          Icons.play_circle_outline,
+                          _continueStrip(data.continueWatching),
+                        ),
                     ],
                   );
                 }),
@@ -141,6 +138,171 @@ class TakipView extends GetView<TakipController> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Seven day chips (today + 6) with a dot where something's on, and the
+  /// selected day's plans / new episodes / releases below. Releases further
+  /// out get a one-line "Sonra" teaser.
+  Widget _weekCalendar(PlansController plans, TrackingModel? data) {
+    final today = DateTime.now();
+    final days = [
+      for (var i = 0; i < 7; i++)
+        DateTime(today.year, today.month, today.day + i),
+    ];
+
+    List<_DayEvent> eventsOn(DateTime day) => [
+      for (final p in plans.plans)
+        if (isSameDay(p.scheduledAt, day) &&
+            p.myResponse != PlanResponse.notGoing)
+          _DayEvent(
+            '📅',
+            '${formatPlanTime(p.scheduledAt).split(' ').last} · ${p.title.name}'
+                '${p.groupName != null ? ' (${p.groupName})' : ''}',
+            p.title,
+          ),
+      if (data != null)
+        for (final e in data.newEpisodes)
+          if (isSameDay(e.airDate, day))
+            _DayEvent(
+              '📺',
+              '${e.title.name} · S${e.season} B${e.episode}',
+              e.title,
+            ),
+      if (data != null)
+        for (final u in data.upcoming)
+          if (isSameDay(u.releaseDate, day))
+            _DayEvent('🎬', '${u.title.name} vizyonda', u.title),
+    ];
+
+    final selected = days[controller.selectedDay.value.clamp(0, 6)];
+    final events = eventsOn(selected);
+    final later = data == null
+        ? <UpcomingReleaseModel>[]
+        : data.upcoming
+              .where(
+                (u) => u.releaseDate.isAfter(
+                  days.last.add(const Duration(days: 1)),
+                ),
+              )
+              .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: 64,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            itemCount: days.length,
+            separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.xs),
+            itemBuilder: (context, i) {
+              final day = days[i];
+              final isSelected = i == controller.selectedDay.value;
+              final hasEvents = eventsOn(day).isNotEmpty;
+              return GestureDetector(
+                onTap: () => controller.selectDay(i),
+                child: Container(
+                  width: 46,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppColors.primaryContainer
+                        : AppColors.surfaceContainer,
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    border: Border.all(
+                      color: isSelected
+                          ? AppColors.primaryContainer
+                          : AppColors.outline,
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        i == 0 ? 'Bugün' : shortWeekday(day),
+                        style: AppTextStyles.labelSm.copyWith(
+                          fontSize: 10,
+                          color: isSelected
+                              ? Colors.white
+                              : AppColors.onSurfaceVariant,
+                        ),
+                      ),
+                      Text(
+                        '${day.day}',
+                        style: AppTextStyles.headlineMd.copyWith(
+                          fontSize: 16,
+                          color: isSelected
+                              ? Colors.white
+                              : AppColors.onSurface,
+                        ),
+                      ),
+                      Container(
+                        width: 5,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: hasEvents
+                              ? (isSelected
+                                    ? Colors.white
+                                    : AppColors.primaryContainer)
+                              : Colors.transparent,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        if (events.isEmpty)
+          _hint('Bu gün için plan, yeni bölüm ya da vizyon yok.')
+        else
+          for (final e in events)
+            InkWell(
+              onTap: () => Get.toNamed(AppRoutes.detail, arguments: e.title),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: 6,
+                ),
+                child: Row(
+                  children: [
+                    Text(e.icon, style: const TextStyle(fontSize: 16)),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        e.text,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.bodyMd.copyWith(fontSize: 14),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        if (later.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.xs,
+              AppSpacing.md,
+              0,
+            ),
+            child: Text(
+              'Sonra: ${later.take(3).map((u) => '${u.title.name} · ${u.releaseDate.day} ${_months[u.releaseDate.month - 1]}').join('  ·  ')}',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.labelSm.copyWith(
+                fontSize: 11,
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -174,20 +336,9 @@ class TakipView extends GetView<TakipController> {
     ),
   );
 
-  Widget _message(String text) => ListView(
-    physics: const AlwaysScrollableScrollPhysics(),
-    children: [
-      Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Text(
-          text,
-          textAlign: TextAlign.center,
-          style: AppTextStyles.bodyMd.copyWith(
-            color: AppColors.onSurfaceVariant,
-          ),
-        ),
-      ),
-    ],
+  Widget _padded(Widget child) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+    child: child,
   );
 
   Widget _section(String title, IconData icon, Widget child) => Padding(
@@ -239,47 +390,6 @@ class TakipView extends GetView<TakipController> {
             entry: entry,
             busy: controller.advancing.contains(entry.id),
             onNext: () => controller.advanceEpisode(entry),
-          ),
-        );
-      },
-    ),
-  );
-
-  Widget _matchesStrip(List<GroupMatchNotification> matches) => SizedBox(
-    height: 200,
-    child: ListView.separated(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      itemCount: matches.length,
-      separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
-      itemBuilder: (context, index) {
-        final m = matches[index];
-        return GestureDetector(
-          onTap: () => Get.toNamed(AppRoutes.detail, arguments: m.title),
-          child: SizedBox(
-            width: 104,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _Poster(title: m.title, width: 104, height: 150),
-                const SizedBox(height: 4),
-                Text(
-                  m.title.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.labelSm,
-                ),
-                Text(
-                  '🎉 ${m.groupName}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.labelSm.copyWith(
-                    fontSize: 11,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ],
-            ),
           ),
         );
       },
@@ -391,139 +501,6 @@ class _ContinueCard extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _NewEpisodeTile extends StatelessWidget {
-  const _NewEpisodeTile({required this.item});
-
-  final NewEpisodeModel item;
-
-  @override
-  Widget build(BuildContext context) {
-    final when = _relativeDay(item.airDate);
-    return InkWell(
-      onTap: () => Get.toNamed(AppRoutes.detail, arguments: item.title),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.xs,
-        ),
-        child: Row(
-          children: [
-            _Poster(title: item.title, width: 44, height: 64),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.title.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.bodyMd,
-                  ),
-                  Text(
-                    [
-                      'S${item.season} · B${item.episode}',
-                      if ((item.episodeName ?? '').isNotEmpty)
-                        item.episodeName!,
-                    ].join('  ·  '),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.labelSm.copyWith(
-                      color: AppColors.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: item.aired
-                    ? AppColors.primaryContainer
-                    : AppColors.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(AppRadius.full),
-              ),
-              child: Text(
-                item.aired ? 'Yeni · $when' : when,
-                style: AppTextStyles.labelSm.copyWith(
-                  fontSize: 11,
-                  color: item.aired ? Colors.white : AppColors.primary,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _UpcomingTile extends StatelessWidget {
-  const _UpcomingTile({required this.item});
-
-  final UpcomingReleaseModel item;
-
-  @override
-  Widget build(BuildContext context) {
-    final date = item.releaseDate;
-    final now = DateTime.now();
-    final daysLeft = DateTime(
-      date.year,
-      date.month,
-      date.day,
-    ).difference(DateTime(now.year, now.month, now.day)).inDays;
-    return InkWell(
-      onTap: () => Get.toNamed(AppRoutes.detail, arguments: item.title),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.xs,
-        ),
-        child: Row(
-          children: [
-            _Poster(title: item.title, width: 44, height: 64),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.title.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.bodyMd,
-                  ),
-                  Text(
-                    '${date.day} ${_months[date.month - 1]} ${date.year}',
-                    style: AppTextStyles.labelSm.copyWith(
-                      color: AppColors.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(AppRadius.full),
-              ),
-              child: Text(
-                daysLeft <= 1 ? 'Yarın' : '$daysLeft gün kaldı',
-                style: AppTextStyles.labelSm.copyWith(
-                  fontSize: 11,
-                  color: AppColors.primary,
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
