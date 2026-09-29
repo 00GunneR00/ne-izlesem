@@ -4,6 +4,7 @@ using Neizlesem.Api.Data;
 using Neizlesem.Api.DTOs;
 using Neizlesem.Api.Models;
 using Neizlesem.Api.Services;
+using Neizlesem.Api.Services.Auth;
 using Neizlesem.Api.Services.Tmdb;
 
 namespace Neizlesem.Api.Controllers;
@@ -93,7 +94,8 @@ public class LibraryController(AppDbContext db, TitleCacheService titleCache, Ti
     [HttpPut("{id:int}")]
     public async Task<ActionResult<LibraryEntryDto>> UpdateStatus(int id, UpdateLibraryEntryRequest request, CancellationToken ct)
     {
-        var entry = await db.LibraryEntries.Include(e => e.Title).FirstOrDefaultAsync(e => e.Id == id, ct);
+        var me = User.GetUserId();
+        var entry = await db.LibraryEntries.Include(e => e.Title).FirstOrDefaultAsync(e => e.Id == id && e.UserId == me, ct);
         if (entry is null)
         {
             return NotFound();
@@ -107,7 +109,8 @@ public class LibraryController(AppDbContext db, TitleCacheService titleCache, Ti
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Remove(int id, CancellationToken ct)
     {
-        var entry = await db.LibraryEntries.FirstOrDefaultAsync(e => e.Id == id, ct);
+        var me = User.GetUserId();
+        var entry = await db.LibraryEntries.FirstOrDefaultAsync(e => e.Id == id && e.UserId == me, ct);
         if (entry is null)
         {
             return NotFound();

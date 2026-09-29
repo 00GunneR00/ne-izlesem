@@ -46,6 +46,9 @@ namespace Neizlesem.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("PasswordHash")
+                        .HasColumnType("text");
+
                     b.PrimitiveCollection<List<int>>("PreferredGenreIds")
                         .IsRequired()
                         .HasColumnType("integer[]");

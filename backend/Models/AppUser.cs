@@ -9,4 +9,10 @@ public class AppUser
     public string FriendCode { get; set; } = string.Empty;
     public List<int> PreferredGenreIds { get; set; } = new();
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// ASP.NET Identity password hash. Null for accounts made before
+    /// passwords existed — those set one on first login ("claim").
+    /// </summary>
+    public string? PasswordHash { get; set; }
 }
