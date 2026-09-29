@@ -51,7 +51,7 @@ class GroupDetailView extends StatelessWidget {
                       'görünür.',
                     )
                   else
-                    _matchesGrid(controller.matches),
+                    _matchesGrid(controller),
                 ] else ...[
                   if (controller.suggestions.isEmpty)
                     _emptyText(
@@ -167,57 +167,160 @@ class GroupDetailView extends StatelessWidget {
     );
   }
 
-  /// Matched titles as a 3-column poster grid (newest first).
-  Widget _matchesGrid(List<GroupMatch> matches) => GridView.builder(
-    shrinkWrap: true,
-    physics: const NeverScrollableScrollPhysics(),
-    padding: EdgeInsets.zero,
-    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-      crossAxisCount: 3,
-      mainAxisSpacing: AppSpacing.sm,
-      crossAxisSpacing: AppSpacing.sm,
-      childAspectRatio: 0.5,
-    ),
-    itemCount: matches.length,
-    itemBuilder: (context, index) {
-      final match = matches[index];
-      return InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        onTap: () => Get.toNamed(AppRoutes.detail, arguments: match.title),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              child: AspectRatio(
-                aspectRatio: 2 / 3,
-                child: match.title.posterUrl != null
-                    ? CachedNetworkImage(
-                        imageUrl: match.title.posterUrl!,
-                        fit: BoxFit.cover,
-                      )
-                    : Container(color: AppColors.surfaceContainerLow),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              match.title.name,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.labelSm,
-            ),
-            Text(
-              '🎉 ${_formatDate(match.matchedAt)}',
-              style: AppTextStyles.labelSm.copyWith(
-                fontSize: 10,
-                color: AppColors.onSurfaceVariant,
-              ),
-            ),
-          ],
+  /// Matched titles as a 3-column poster grid, ranked by members' votes
+  /// (#1 gets 🏆 once it has a vote). Tap the vote chip to vote/un-vote.
+  Widget _matchesGrid(GroupDetailController controller) {
+    final matches = controller.matches;
+    // Read here (inside the page's Obx) — itemBuilder runs later, untracked.
+    final busyIds = controller.voting.toSet();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'İzlemek istediklerine oy ver; en çok oy alan en üste çıkar.',
+          style: AppTextStyles.labelSm.copyWith(
+            color: AppColors.onSurfaceVariant,
+          ),
         ),
-      );
-    },
-  );
+        const SizedBox(height: AppSpacing.sm),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            mainAxisSpacing: AppSpacing.sm,
+            crossAxisSpacing: AppSpacing.sm,
+            childAspectRatio: 0.44,
+          ),
+          itemCount: matches.length,
+          itemBuilder: (context, index) => _matchTile(
+            controller,
+            matches[index],
+            rank: index + 1,
+            busy: busyIds.contains(matches[index].id),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _matchTile(
+    GroupDetailController controller,
+    GroupMatch match, {
+    required int rank,
+    required bool busy,
+  }) {
+    final isTop = rank == 1 && match.voteCount > 0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: () => Get.toNamed(AppRoutes.detail, arguments: match.title),
+          child: Stack(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: isTop
+                      ? Border.all(color: AppColors.primaryContainer, width: 2)
+                      : null,
+                  boxShadow: isTop
+                      ? [
+                          BoxShadow(
+                            color: AppColors.glowPrimary,
+                            blurRadius: 12,
+                          ),
+                        ]
+                      : null,
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  child: AspectRatio(
+                    aspectRatio: 2 / 3,
+                    child: match.title.posterUrl != null
+                        ? CachedNetworkImage(
+                            imageUrl: match.title.posterUrl!,
+                            fit: BoxFit.cover,
+                          )
+                        : Container(color: AppColors.surfaceContainerLow),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 4,
+                left: 4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isTop
+                        ? AppColors.primaryContainer
+                        : AppColors.background.withValues(alpha: 0.7),
+                    borderRadius: BorderRadius.circular(AppRadius.full),
+                  ),
+                  child: Text(
+                    isTop ? '🏆 #1' : '#$rank',
+                    style: AppTextStyles.labelSm.copyWith(
+                      fontSize: 10,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          match.title.name,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: AppTextStyles.labelSm,
+        ),
+        const Spacer(),
+        SizedBox(
+          width: double.infinity,
+          height: 28,
+          child: Tooltip(
+            message: match.voters.isEmpty
+                ? 'Henüz oy yok'
+                : '${match.voters.join(', ')} oy verdi',
+            child: OutlinedButton.icon(
+              onPressed: busy ? null : () => controller.toggleVote(match),
+              style: OutlinedButton.styleFrom(
+                padding: EdgeInsets.zero,
+                backgroundColor: match.votedByMe
+                    ? AppColors.primaryContainer
+                    : Colors.transparent,
+                side: BorderSide(
+                  color: match.votedByMe
+                      ? AppColors.primaryContainer
+                      : AppColors.outline,
+                ),
+              ),
+              icon: Icon(
+                match.votedByMe
+                    ? Icons.thumb_up_alt
+                    : Icons.thumb_up_alt_outlined,
+                size: 14,
+                color: match.votedByMe ? Colors.white : AppColors.primary,
+              ),
+              label: Text(
+                '${match.voteCount}',
+                style: AppTextStyles.labelSm.copyWith(
+                  fontSize: 12,
+                  color: match.votedByMe ? Colors.white : AppColors.primary,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   /// One card per suggested title: who suggested it, who's in, who passed,
   /// and "2/3 onay" progress. Everyone in → "🎉 Eşleşme".

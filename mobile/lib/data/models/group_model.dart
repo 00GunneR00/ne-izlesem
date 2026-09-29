@@ -28,12 +28,27 @@ class GroupMatch {
   final TitleModel title;
   final DateTime matchedAt;
 
-  GroupMatch({required this.id, required this.title, required this.matchedAt});
+  /// Members' votes to watch it — the backend orders matches by this.
+  final int voteCount;
+  final bool votedByMe;
+  final List<String> voters;
+
+  GroupMatch({
+    required this.id,
+    required this.title,
+    required this.matchedAt,
+    this.voteCount = 0,
+    this.votedByMe = false,
+    this.voters = const [],
+  });
 
   factory GroupMatch.fromJson(Map<String, dynamic> json) => GroupMatch(
         id: json['id'] as int,
         title: TitleModel.fromJson(json['title'] as Map<String, dynamic>),
         matchedAt: DateTime.parse(json['matchedAt'] as String),
+        voteCount: json['voteCount'] as int? ?? 0,
+        votedByMe: json['votedByMe'] as bool? ?? false,
+        voters: (json['voters'] as List?)?.cast<String>() ?? const [],
       );
 }
 

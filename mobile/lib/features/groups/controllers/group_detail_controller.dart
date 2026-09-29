@@ -20,6 +20,34 @@ class GroupDetailController extends GetxController {
 
   void selectTab(int index) => selectedTab.value = index;
 
+  /// Match ids with a vote request in flight.
+  final RxSet<int> voting = <int>{}.obs;
+
+  /// Vote / un-vote a match, then re-rank the same way the backend does
+  /// (most votes first, ties → newer match) so the grid reorders at once.
+  Future<void> toggleVote(GroupMatch match) async {
+    final userId = _session.userId.value;
+    if (userId == null || !voting.add(match.id)) return;
+    try {
+      final updated = await _groupsService.toggleMatchVote(
+        groupId,
+        match.id,
+        userId,
+      );
+      final list = [
+        for (final m in matches) m.id == updated.id ? updated : m,
+      ]..sort((a, b) {
+          final byVotes = b.voteCount.compareTo(a.voteCount);
+          return byVotes != 0 ? byVotes : b.matchedAt.compareTo(a.matchedAt);
+        });
+      matches.value = list;
+    } catch (_) {
+      Get.snackbar('Olmadı', 'Oyun kaydedilemedi, tekrar dene.');
+    } finally {
+      voting.remove(match.id);
+    }
+  }
+
   @override
   void onInit() {
     super.onInit();

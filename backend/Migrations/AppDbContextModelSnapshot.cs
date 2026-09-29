@@ -189,6 +189,33 @@ namespace Neizlesem.Api.Migrations
                     b.ToTable("GroupMatches");
                 });
 
+            modelBuilder.Entity("Neizlesem.Api.Models.GroupMatchVote", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("GroupMatchId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("VotedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("GroupMatchId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("GroupMatchVotes");
+                });
+
             modelBuilder.Entity("Neizlesem.Api.Models.GroupMember", b =>
                 {
                     b.Property<int>("Id")
@@ -598,6 +625,25 @@ namespace Neizlesem.Api.Migrations
                     b.Navigation("Title");
                 });
 
+            modelBuilder.Entity("Neizlesem.Api.Models.GroupMatchVote", b =>
+                {
+                    b.HasOne("Neizlesem.Api.Models.GroupMatch", "GroupMatch")
+                        .WithMany("Votes")
+                        .HasForeignKey("GroupMatchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Neizlesem.Api.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("GroupMatch");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Neizlesem.Api.Models.GroupMember", b =>
                 {
                     b.HasOne("Neizlesem.Api.Models.Group", "Group")
@@ -774,6 +820,11 @@ namespace Neizlesem.Api.Migrations
                     b.Navigation("List");
 
                     b.Navigation("Title");
+                });
+
+            modelBuilder.Entity("Neizlesem.Api.Models.GroupMatch", b =>
+                {
+                    b.Navigation("Votes");
                 });
 
             modelBuilder.Entity("Neizlesem.Api.Models.Suggestion", b =>

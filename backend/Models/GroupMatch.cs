@@ -9,4 +9,16 @@ public class GroupMatch
     public int TitleId { get; set; }
     public Title? Title { get; set; }
     public DateTime MatchedAt { get; set; } = DateTime.UtcNow;
+    public List<GroupMatchVote> Votes { get; set; } = new();
+}
+
+/// <summary>A member's vote to watch a matched title — ranks the group's matches.</summary>
+public class GroupMatchVote
+{
+    public int Id { get; set; }
+    public int GroupMatchId { get; set; }
+    public GroupMatch? GroupMatch { get; set; }
+    public int UserId { get; set; }
+    public AppUser? User { get; set; }
+    public DateTime VotedAt { get; set; } = DateTime.UtcNow;
 }

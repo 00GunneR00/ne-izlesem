@@ -16,6 +16,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<GroupMember> GroupMembers => Set<GroupMember>();
     public DbSet<GroupSwipe> GroupSwipes => Set<GroupSwipe>();
     public DbSet<GroupMatch> GroupMatches => Set<GroupMatch>();
+    public DbSet<GroupMatchVote> GroupMatchVotes => Set<GroupMatchVote>();
     public DbSet<UserList> UserLists => Set<UserList>();
     public DbSet<UserListItem> UserListItems => Set<UserListItem>();
     public DbSet<Suggestion> Suggestions => Set<Suggestion>();
@@ -64,6 +65,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<GroupMatch>()
             .HasIndex(m => new { m.GroupId, m.TitleId })
             .IsUnique();
+
+        modelBuilder.Entity<GroupMatchVote>()
+            .HasIndex(v => new { v.GroupMatchId, v.UserId })
+            .IsUnique();
+
+        modelBuilder.Entity<GroupMatch>()
+            .HasMany(m => m.Votes)
+            .WithOne(v => v.GroupMatch)
+            .HasForeignKey(v => v.GroupMatchId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<UserList>()
             .HasMany(l => l.Items)
