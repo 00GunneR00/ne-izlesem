@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/plan_time.dart';
 import '../../../data/models/title_model.dart';
+import '../../notifications/notification_links.dart';
 import '../../social/controllers/social_controller.dart';
 import '../controllers/plans_controller.dart';
 
@@ -119,11 +120,23 @@ class _PlanEditorSheetState extends State<_PlanEditorSheet> {
     setState(() => _saving = false);
     if (plan != null) {
       Get.back();
+      // Tapping it (or "Takip'te gör") jumps to the plan in Takip.
+      void showInTakip() {
+        Get.closeCurrentSnackbar();
+        openPlan(plan);
+      }
+
       Get.snackbar(
         'Planlandı 📅',
         plan.isSolo
             ? '${plan.title.name} · ${formatPlanTime(plan.scheduledAt)}'
             : '${plan.title.name} · ${formatPlanTime(plan.scheduledAt)} — davetler gönderildi.',
+        duration: const Duration(seconds: 5),
+        onTap: (_) => showInTakip(),
+        mainButton: TextButton(
+          onPressed: showInTakip,
+          child: const Text("Takip'te gör"),
+        ),
       );
     }
   }
