@@ -41,34 +41,29 @@ class GroupDetailView extends StatelessWidget {
               children: [
                 _swipeTogetherCard(),
                 const SizedBox(height: AppSpacing.lg),
-                Text(
-                  'Eşleşmeler',
-                  style: AppTextStyles.headlineMd.copyWith(fontSize: 18),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                if (controller.matches.isEmpty)
-                  _emptyText(
-                    'Henüz eşleşme yok. Birlikte seçmeye başlayın; herkesin '
-                    'sağa kaydırdığı ilk film burada görünecek.',
-                  )
-                else
-                  _matchesStrip(controller.matches),
+                _segmentedTabs(controller),
                 const SizedBox(height: AppSpacing.lg),
-                Text(
-                  'Grubun Önerileri',
-                  style: AppTextStyles.headlineMd.copyWith(fontSize: 18),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                if (controller.suggestions.isEmpty)
-                  _emptyText(
-                    'Henüz öneri yok. Bir filmin detayından "Bunu izleyelim '
-                    'mi?" ile gruba öner; herkes onaylarsa eşleşme olur.',
-                  )
-                else
-                  for (final item in controller.suggestions) ...[
-                    _suggestionCard(item),
-                    const SizedBox(height: AppSpacing.sm),
-                  ],
+                if (controller.selectedTab.value == 0) ...[
+                  if (controller.matches.isEmpty)
+                    _emptyText(
+                      'Henüz eşleşme yok. "Birlikte Seç"te herkesin sağa '
+                      'kaydırdığı ya da herkesin onayladığı öneriler burada '
+                      'görünür.',
+                    )
+                  else
+                    _matchesGrid(controller.matches),
+                ] else ...[
+                  if (controller.suggestions.isEmpty)
+                    _emptyText(
+                      'Henüz öneri yok. Bir filmin detayından "Bunu izleyelim '
+                      'mi?" ile gruba öner; herkes onaylarsa eşleşme olur.',
+                    )
+                  else
+                    for (final item in controller.suggestions) ...[
+                      _suggestionCard(item),
+                      const SizedBox(height: AppSpacing.sm),
+                    ],
+                ],
               ],
             ),
           );
@@ -122,47 +117,106 @@ class GroupDetailView extends StatelessWidget {
     style: AppTextStyles.bodyMd.copyWith(color: AppColors.onSurfaceVariant),
   );
 
-  Widget _matchesStrip(List<GroupMatch> matches) => SizedBox(
-    height: 190,
-    child: ListView.separated(
-      scrollDirection: Axis.horizontal,
-      itemCount: matches.length,
-      separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
-      itemBuilder: (context, index) {
-        final match = matches[index];
-        return InkWell(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          onTap: () => Get.toNamed(AppRoutes.detail, arguments: match.title),
-          child: SizedBox(
-            width: 100,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                  child: AspectRatio(
-                    aspectRatio: 2 / 3,
-                    child: match.title.posterUrl != null
-                        ? CachedNetworkImage(
-                            imageUrl: match.title.posterUrl!,
-                            fit: BoxFit.cover,
-                          )
-                        : Container(color: AppColors.surfaceContainerLow),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  match.title.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.labelSm,
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+  /// Eşleşmeler | Grubun Önerileri — same look as Sosyal's
+  /// Arkadaş Akışı | Genel Trend switch, with counts.
+  Widget _segmentedTabs(GroupDetailController controller) => Container(
+    padding: const EdgeInsets.all(4),
+    decoration: BoxDecoration(
+      color: AppColors.surfaceContainer,
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      border: Border.all(color: AppColors.outline),
     ),
+    child: Row(
+      children: [
+        Expanded(
+          child: _tabButton(
+            controller,
+            'Eşleşmeler · ${controller.matches.length}',
+            0,
+          ),
+        ),
+        Expanded(
+          child: _tabButton(
+            controller,
+            'Grubun Önerileri · ${controller.suggestions.length}',
+            1,
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Widget _tabButton(GroupDetailController controller, String label, int index) {
+    final selected = controller.selectedTab.value == index;
+    return GestureDetector(
+      onTap: () => controller.selectTab(index),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.surfaceContainerHigh : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: AppTextStyles.labelSm.copyWith(
+            color: selected ? AppColors.primary : AppColors.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Matched titles as a 3-column poster grid (newest first).
+  Widget _matchesGrid(List<GroupMatch> matches) => GridView.builder(
+    shrinkWrap: true,
+    physics: const NeverScrollableScrollPhysics(),
+    padding: EdgeInsets.zero,
+    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      crossAxisCount: 3,
+      mainAxisSpacing: AppSpacing.sm,
+      crossAxisSpacing: AppSpacing.sm,
+      childAspectRatio: 0.5,
+    ),
+    itemCount: matches.length,
+    itemBuilder: (context, index) {
+      final match = matches[index];
+      return InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        onTap: () => Get.toNamed(AppRoutes.detail, arguments: match.title),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              child: AspectRatio(
+                aspectRatio: 2 / 3,
+                child: match.title.posterUrl != null
+                    ? CachedNetworkImage(
+                        imageUrl: match.title.posterUrl!,
+                        fit: BoxFit.cover,
+                      )
+                    : Container(color: AppColors.surfaceContainerLow),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              match.title.name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.labelSm,
+            ),
+            Text(
+              '🎉 ${_formatDate(match.matchedAt)}',
+              style: AppTextStyles.labelSm.copyWith(
+                fontSize: 10,
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      );
+    },
   );
 
   /// One card per suggested title: who suggested it, who's in, who passed,

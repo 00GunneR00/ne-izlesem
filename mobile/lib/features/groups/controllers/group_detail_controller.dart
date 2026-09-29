@@ -15,6 +15,11 @@ class GroupDetailController extends GetxController {
   final RxList<GroupMatch> matches = <GroupMatch>[].obs;
   final RxBool isLoading = true.obs;
 
+  /// 0 = Eşleşmeler, 1 = Grubun Önerileri (same segmented style as Sosyal).
+  final RxInt selectedTab = 0.obs;
+
+  void selectTab(int index) => selectedTab.value = index;
+
   @override
   void onInit() {
     super.onInit();
