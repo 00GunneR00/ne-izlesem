@@ -17,7 +17,8 @@ public record SuggestionInboxItemDto(
     TitleDto Title,
     string? Note,
     string? GroupName,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    int? GroupId = null);
 
 public record SuggestionNotificationDto(
     int RecipientRowId,
@@ -25,7 +26,9 @@ public record SuggestionNotificationDto(
     TitleDto Title,
     SuggestionStatus Status,
     DateTime RespondedAt,
-    bool Seen);
+    bool Seen,
+    int? GroupId = null,
+    string? GroupName = null);
 
 /// <summary>
 /// One card per title suggested to a group ("Grubun Önerileri"), however

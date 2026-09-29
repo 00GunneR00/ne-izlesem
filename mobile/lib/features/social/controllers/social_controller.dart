@@ -235,6 +235,8 @@ class SocialController extends GetxController {
           status: n.status,
           respondedAt: n.respondedAt,
           seen: true,
+          groupId: n.groupId,
+          groupName: n.groupName,
         ),
     ];
     groupMatchNotifications.value = [

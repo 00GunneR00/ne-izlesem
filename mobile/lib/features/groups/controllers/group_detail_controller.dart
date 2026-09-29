@@ -6,7 +6,8 @@ import '../../../data/models/suggestion_model.dart';
 import '../../../data/services/groups_service.dart';
 
 class GroupDetailController extends GetxController {
-  GroupDetailController(this.groupId);
+  GroupDetailController(this.groupId, {int initialTab = 0})
+    : selectedTab = initialTab.obs;
 
   final int groupId;
   final GroupsService _groupsService = GroupsService();
@@ -17,7 +18,7 @@ class GroupDetailController extends GetxController {
   final RxBool isLoading = true.obs;
 
   /// 0 = Eşleşmeler, 1 = Grubun Önerileri (same segmented style as Sosyal).
-  final RxInt selectedTab = 0.obs;
+  final RxInt selectedTab;
 
   void selectTab(int index) => selectedTab.value = index;
 
@@ -50,9 +51,8 @@ class GroupDetailController extends GetxController {
         userId,
         choice,
       );
-      final list = [
-        for (final m in matches) m.id == updated.id ? updated : m,
-      ]..sort((a, b) {
+      final list = [for (final m in matches) m.id == updated.id ? updated : m]
+        ..sort((a, b) {
           final byScore = b.score.compareTo(a.score);
           if (byScore != 0) return byScore;
           final byYes = b.yes.length.compareTo(a.yes.length);

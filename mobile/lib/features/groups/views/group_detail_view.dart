@@ -14,14 +14,17 @@ import 'group_swipe_view.dart';
 /// point, the group's matches (everyone swiped right on, or everyone backed a
 /// suggestion), and "Grubun Önerileri" — one card per suggested title.
 class GroupDetailView extends StatelessWidget {
-  const GroupDetailView({required this.group, super.key});
+  const GroupDetailView({required this.group, this.initialTab = 0, super.key});
 
   final GroupModel group;
+
+  /// 0 = Eşleşmeler, 1 = Grubun Önerileri (e.g. opened from a notification).
+  final int initialTab;
 
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(
-      GroupDetailController(group.id),
+      GroupDetailController(group.id, initialTab: initialTab),
       tag: 'group-${group.id}',
     );
     return Scaffold(

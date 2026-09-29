@@ -75,7 +75,8 @@ public class SuggestionsController(
             mapper.ToDto(r.Suggestion.Title!),
             r.Suggestion.Note,
             r.Suggestion.Group?.Name,
-            r.Suggestion.CreatedAt)).ToList();
+            r.Suggestion.CreatedAt,
+            r.Suggestion.GroupId)).ToList();
     }
 
     [HttpPost("{recipientRowId:int}/accept")]
@@ -140,6 +141,7 @@ public class SuggestionsController(
         var rows = await db.SuggestionRecipients
             .Include(r => r.Recipient)
             .Include(r => r.Suggestion)!.ThenInclude(s => s!.Title)
+            .Include(r => r.Suggestion)!.ThenInclude(s => s!.Group)
             .Where(r => r.Suggestion!.SenderId == userId && r.Status != SuggestionStatus.Pending && !r.DismissedBySender)
             .OrderByDescending(r => r.RespondedAt)
             .Take(30)
@@ -151,7 +153,9 @@ public class SuggestionsController(
             mapper.ToDto(r.Suggestion!.Title!),
             r.Status,
             r.RespondedAt!.Value,
-            r.SeenBySender)).ToList();
+            r.SeenBySender,
+            r.Suggestion.GroupId,
+            r.Suggestion.Group?.Name)).ToList();
     }
 
     [HttpPost("notifications/mark-seen")]

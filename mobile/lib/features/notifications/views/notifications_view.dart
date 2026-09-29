@@ -1,9 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../../core/routes/app_routes.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/suggestion_model.dart';
+import '../notification_links.dart';
 import '../../plans/controllers/plans_controller.dart';
 import '../../plans/widgets/plan_card.dart';
 import '../../social/controllers/social_controller.dart';
@@ -97,7 +97,11 @@ class NotificationsView extends GetView<SocialController> {
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     for (final p in invites) ...[
-                      PlanCard(plan: p, showDate: true),
+                      // Tap → Takip, on that plan's tab (buttons still answer).
+                      GestureDetector(
+                        onTap: () => openPlan(p),
+                        child: PlanCard(plan: p, showDate: true),
+                      ),
                       const SizedBox(height: AppSpacing.xs),
                     ],
                     const SizedBox(height: AppSpacing.lg),
@@ -148,7 +152,8 @@ class NotificationsView extends GetView<SocialController> {
       for (final n in controller.groupMatchNotifications)
         InkWell(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          onTap: () => Get.toNamed(AppRoutes.detail, arguments: n.title),
+          // → the group's Eşleşmeler (where it can be voted on / planned).
+          onTap: () => openGroup(n.groupId, tab: 0, fallbackTitle: n.title),
           child: Container(
             margin: const EdgeInsets.only(bottom: AppSpacing.xs),
             padding: const EdgeInsets.all(AppSpacing.sm),
@@ -216,10 +221,15 @@ class NotificationsView extends GetView<SocialController> {
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
+                // Tap the name → Arkadaşlarım (✓ / ✕ still answer here).
                 Expanded(
-                  child: Text(
-                    '${request.requesterDisplayName} (@${request.requesterUsername})',
-                    style: AppTextStyles.bodyMd,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: openFriends,
+                    child: Text(
+                      '${request.requesterDisplayName} (@${request.requesterUsername})',
+                      style: AppTextStyles.bodyMd,
+                    ),
                   ),
                 ),
                 IconButton(
@@ -253,7 +263,13 @@ class NotificationsView extends GetView<SocialController> {
         style: AppTextStyles.headlineMd.copyWith(fontSize: 18),
       ),
       const SizedBox(height: AppSpacing.sm),
-      for (final item in controller.suggestionInbox) SuggestionCard(item: item),
+      // Tap → the group's "Grubun Önerileri" (or the title if it was sent
+      // directly); the card's own buttons still accept / pass.
+      for (final item in controller.suggestionInbox)
+        GestureDetector(
+          onTap: () => openSuggestion(item.title, groupId: item.groupId),
+          child: SuggestionCard(item: item),
+        ),
     ],
   );
 
@@ -266,34 +282,41 @@ class NotificationsView extends GetView<SocialController> {
       ),
       const SizedBox(height: AppSpacing.sm),
       for (final n in controller.suggestionNotifications)
-        Container(
-          margin: const EdgeInsets.only(bottom: AppSpacing.xs),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm,
-            vertical: AppSpacing.sm,
-          ),
-          decoration: _itemDecoration(unread: !n.seen),
-          child: Row(
-            children: [
-              Icon(
-                n.status == SuggestionStatus.accepted
-                    ? Icons.check_circle
-                    : Icons.close,
-                color: n.status == SuggestionStatus.accepted
-                    ? AppColors.primary
-                    : AppColors.onSurfaceVariant,
-                size: 18,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
+        InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          onTap: () => openSuggestion(n.title, groupId: n.groupId),
+          child: Container(
+            margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: AppSpacing.sm,
+            ),
+            decoration: _itemDecoration(unread: !n.seen),
+            child: Row(
+              children: [
+                Icon(
                   n.status == SuggestionStatus.accepted
-                      ? '${n.recipientDisplayName}, "${n.title.name}" filmini izleyecekler listesine ekledi.'
-                      : '${n.recipientDisplayName}, "${n.title.name}" önerini geçti.',
-                  style: AppTextStyles.bodyMd.copyWith(fontSize: 13),
+                      ? Icons.check_circle
+                      : Icons.close,
+                  color: n.status == SuggestionStatus.accepted
+                      ? AppColors.primary
+                      : AppColors.onSurfaceVariant,
+                  size: 18,
                 ),
-              ),
-            ],
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(switch ((n.status, n.groupName)) {
+                    (SuggestionStatus.accepted, final String group) =>
+                      '${n.recipientDisplayName}, "$group" grubundaki '
+                          '"${n.title.name}" önerini onayladı.',
+                    (SuggestionStatus.accepted, _) =>
+                      '${n.recipientDisplayName}, "${n.title.name}" filmini izleyecekler listesine ekledi.',
+                    _ =>
+                      '${n.recipientDisplayName}, "${n.title.name}" önerini geçti.',
+                  }, style: AppTextStyles.bodyMd.copyWith(fontSize: 13)),
+                ),
+              ],
+            ),
           ),
         ),
     ],
