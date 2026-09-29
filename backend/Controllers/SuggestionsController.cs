@@ -10,7 +10,8 @@ namespace Neizlesem.Api.Controllers;
 
 [ApiController]
 [Route("api/suggestions")]
-public class SuggestionsController(AppDbContext db, TitleCacheService titleCache, TitleMapper mapper) : ControllerBase
+public class SuggestionsController(
+    AppDbContext db, TitleCacheService titleCache, TitleMapper mapper, GroupSuggestionMatcher matcher) : ControllerBase
 {
     [HttpPost]
     public async Task<IActionResult> Send(SendSuggestionRequest request, CancellationToken ct)
@@ -78,7 +79,7 @@ public class SuggestionsController(AppDbContext db, TitleCacheService titleCache
     }
 
     [HttpPost("{recipientRowId:int}/accept")]
-    public async Task<IActionResult> Accept(int recipientRowId, [FromQuery] int userId, CancellationToken ct)
+    public async Task<ActionResult<SuggestionAcceptResultDto>> Accept(int recipientRowId, [FromQuery] int userId, CancellationToken ct)
     {
         var row = await db.SuggestionRecipients
             .Include(r => r.Suggestion)
@@ -111,7 +112,11 @@ public class SuggestionsController(AppDbContext db, TitleCacheService titleCache
         }
 
         await db.SaveChangesAsync(ct);
-        return NoContent();
+
+        // Everyone in the group now on board → it's a group match.
+        var matched = row.Suggestion.GroupId is { } groupId
+                      && await matcher.TryMatchAsync(groupId, row.Suggestion.TitleId, ct);
+        return new SuggestionAcceptResultDto(matched);
     }
 
     [HttpPost("{recipientRowId:int}/pass")]

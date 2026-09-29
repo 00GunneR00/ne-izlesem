@@ -140,12 +140,22 @@ class SocialController extends GetxController {
   Future<void> acceptSuggestion(SuggestionInboxItem item) async {
     final userId = _userId;
     if (userId == null) return;
-    await _suggestionsService.accept(item.recipientRowId, userId);
+    final matched = await _suggestionsService.accept(
+      item.recipientRowId,
+      userId,
+    );
     suggestionInbox.removeWhere((s) => s.recipientRowId == item.recipientRowId);
-    if (item.groupName != null) {
+    if (matched) {
       Get.snackbar(
-        'Kabul edildi',
-        '${item.title.name} "${item.groupName}" grubunun izleme listesine eklendi.',
+        'Eşleşme! 🎉',
+        '"${item.groupName}" grubunda herkes ${item.title.name} izlemek istiyor.',
+      );
+      reload(); // the new match shows up in notifications right away
+    } else if (item.groupName != null) {
+      Get.snackbar(
+        'Onaylandı',
+        '${item.title.name} için onayın "${item.groupName}" grubunun '
+            'önerilerine eklendi.',
       );
     } else {
       Get.snackbar(

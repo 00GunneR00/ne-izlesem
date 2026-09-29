@@ -25,9 +25,10 @@ class GroupsService {
   Future<void> delete(int groupId, int userId) =>
       _dio.delete('/groups/$groupId', queryParameters: {'userId': userId});
 
-  Future<List<GroupWatchlistItem>> getWatchlist(int groupId, int userId) async {
-    final response = await _dio.get('/groups/$groupId/watchlist', queryParameters: {'userId': userId});
-    return (response.data as List).map((e) => GroupWatchlistItem.fromJson(e)).toList();
+  /// "Grubun Önerileri": one entry per suggested title.
+  Future<List<GroupSuggestion>> getSuggestions(int groupId, int userId) async {
+    final response = await _dio.get('/groups/$groupId/suggestions', queryParameters: {'userId': userId});
+    return (response.data as List).map((e) => GroupSuggestion.fromJson(e)).toList();
   }
 
   /// Shared "Birlikte Seç" cards; titles other members liked come first.

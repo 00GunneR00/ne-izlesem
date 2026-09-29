@@ -54,26 +54,74 @@ public class GroupsController(AppDbContext db, TitleMapper mapper) : ControllerB
         return result;
     }
 
-    [HttpGet("{id:int}/watchlist")]
-    public async Task<ActionResult<List<GroupWatchlistItemDto>>> GetWatchlist(int id, [FromQuery] int userId, CancellationToken ct)
+    /// <summary>
+    /// "Grubun Önerileri": every title suggested to the group, one entry per
+    /// title (even if suggested/accepted several times), with who suggested,
+    /// accepted and passed. Only current members count toward support.
+    /// </summary>
+    [HttpGet("{id:int}/suggestions")]
+    public async Task<ActionResult<List<GroupSuggestionDto>>> GetSuggestions(int id, [FromQuery] int userId, CancellationToken ct)
     {
-        var isMember = await db.GroupMembers.AnyAsync(m => m.GroupId == id && m.UserId == userId, ct);
-        if (!isMember)
+        var members = await db.GroupMembers
+            .Where(m => m.GroupId == id)
+            .Select(m => m.UserId)
+            .ToListAsync(ct);
+        if (!members.Contains(userId))
         {
             return NotFound();
         }
+        var memberSet = members.ToHashSet();
 
-        var rows = await db.SuggestionRecipients
-            .Include(r => r.Recipient)
-            .Include(r => r.Suggestion)!.ThenInclude(s => s!.Title)
-            .Where(r => r.Suggestion!.GroupId == id && r.Status == SuggestionStatus.Accepted)
-            .OrderByDescending(r => r.RespondedAt)
+        var suggestions = await db.Suggestions
+            .Include(s => s.Sender)
+            .Include(s => s.Title)
+            .Include(s => s.Recipients).ThenInclude(r => r.Recipient)
+            .Where(s => s.GroupId == id)
             .ToListAsync(ct);
+        var matchedTitleIds = (await db.GroupMatches
+            .Where(m => m.GroupId == id)
+            .Select(m => m.TitleId)
+            .ToListAsync(ct)).ToHashSet();
 
-        return rows.Select(r => new GroupWatchlistItemDto(
-            mapper.ToDto(r.Suggestion!.Title!),
-            r.Recipient!.DisplayName,
-            r.RespondedAt!.Value)).ToList();
+        static List<string> Names(IEnumerable<AppUser> users) =>
+            users.DistinctBy(u => u.Id).Select(u => u.DisplayName).ToList();
+
+        return suggestions
+            .GroupBy(s => s.TitleId)
+            .Select(g =>
+            {
+                var senders = g.Select(s => s.Sender!).Where(u => memberSet.Contains(u.Id)).ToList();
+                var responses = g.SelectMany(s => s.Recipients)
+                    .Where(r => memberSet.Contains(r.RecipientId))
+                    .ToList();
+                var accepters = responses
+                    .Where(r => r.Status == SuggestionStatus.Accepted)
+                    .Select(r => r.Recipient!)
+                    .ToList();
+                // Someone who accepted any suggestion of it isn't "passed".
+                var passers = responses
+                    .Where(r => r.Status == SuggestionStatus.Passed)
+                    .Select(r => r.Recipient!)
+                    .Where(u => accepters.All(a => a.Id != u.Id) && senders.All(s => s.Id != u.Id))
+                    .ToList();
+                var support = senders.Select(u => u.Id).Concat(accepters.Select(u => u.Id)).ToHashSet();
+                var lastActivity = g.Select(s => s.CreatedAt)
+                    .Concat(responses.Where(r => r.RespondedAt.HasValue).Select(r => r.RespondedAt!.Value))
+                    .Max();
+
+                return new GroupSuggestionDto(
+                    mapper.ToDto(g.First().Title!),
+                    Names(senders),
+                    g.OrderByDescending(s => s.CreatedAt).Select(s => s.Note).FirstOrDefault(n => n != null),
+                    Names(accepters),
+                    Names(passers),
+                    support.Count,
+                    members.Count,
+                    matchedTitleIds.Contains(g.Key),
+                    lastActivity);
+            })
+            .OrderByDescending(s => s.LastActivityAt)
+            .ToList();
     }
 
     [HttpDelete("{id:int}")]
@@ -85,8 +133,19 @@ public class GroupsController(AppDbContext db, TitleMapper mapper) : ControllerB
             return NotFound();
         }
 
+        // The FK would only null out Suggestion.GroupId, turning the group's
+        // pending suggestions into stray direct ones in members' inboxes —
+        // remove them along with the group instead.
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await db.SuggestionRecipients
+            .Where(r => r.Suggestion!.GroupId == id)
+            .ExecuteDeleteAsync(ct);
+        await db.Suggestions
+            .Where(s => s.GroupId == id)
+            .ExecuteDeleteAsync(ct);
         db.Groups.Remove(group);
         await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
         return NoContent();
     }
 

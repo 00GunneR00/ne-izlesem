@@ -65,20 +65,41 @@ class SuggestionNotification {
       );
 }
 
-class GroupWatchlistItem {
+/// "Grubun Önerileri": one card per title suggested to a group, however many
+/// times it was suggested or accepted. [supportCount] = members who
+/// suggested or accepted it; when that's everyone it's a match.
+class GroupSuggestion {
   final TitleModel title;
-  final String acceptedByDisplayName;
-  final DateTime acceptedAt;
+  final List<String> suggestedBy;
+  final String? note;
+  final List<String> acceptedBy;
+  final List<String> passedBy;
+  final int supportCount;
+  final int memberCount;
+  final bool isMatch;
+  final DateTime lastActivityAt;
 
-  GroupWatchlistItem({
+  GroupSuggestion({
     required this.title,
-    required this.acceptedByDisplayName,
-    required this.acceptedAt,
+    required this.suggestedBy,
+    this.note,
+    required this.acceptedBy,
+    required this.passedBy,
+    required this.supportCount,
+    required this.memberCount,
+    required this.isMatch,
+    required this.lastActivityAt,
   });
 
-  factory GroupWatchlistItem.fromJson(Map<String, dynamic> json) => GroupWatchlistItem(
+  factory GroupSuggestion.fromJson(Map<String, dynamic> json) => GroupSuggestion(
         title: TitleModel.fromJson(json['title'] as Map<String, dynamic>),
-        acceptedByDisplayName: json['acceptedByDisplayName'] as String,
-        acceptedAt: DateTime.parse(json['acceptedAt'] as String),
+        suggestedBy: (json['suggestedBy'] as List).cast<String>(),
+        note: json['note'] as String?,
+        acceptedBy: (json['acceptedBy'] as List).cast<String>(),
+        passedBy: (json['passedBy'] as List).cast<String>(),
+        supportCount: json['supportCount'] as int,
+        memberCount: json['memberCount'] as int,
+        isMatch: json['isMatch'] as bool,
+        lastActivityAt: DateTime.parse(json['lastActivityAt'] as String),
       );
 }

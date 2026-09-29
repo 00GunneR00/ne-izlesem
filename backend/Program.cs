@@ -28,6 +28,7 @@ builder.Services.AddHttpClient<ITmdbService, TmdbService>(client =>
 builder.Services.AddScoped<TitleMapper>();
 builder.Services.AddScoped<TitleCacheService>();
 builder.Services.AddScoped<SwipeDeckService>();
+builder.Services.AddScoped<GroupSuggestionMatcher>();
 builder.Services.AddHostedService<TitleLanguageBackfillService>();
 
 builder.Services.AddCors(options =>

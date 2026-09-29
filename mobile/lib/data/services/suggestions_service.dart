@@ -27,8 +27,15 @@ class SuggestionsService {
     return (response.data as List).map((e) => SuggestionInboxItem.fromJson(e)).toList();
   }
 
-  Future<void> accept(int recipientRowId, int userId) =>
-      _dio.post('/suggestions/$recipientRowId/accept', queryParameters: {'userId': userId});
+  /// True when this accept made the whole group agree — a new group match.
+  Future<bool> accept(int recipientRowId, int userId) async {
+    final response = await _dio.post(
+      '/suggestions/$recipientRowId/accept',
+      queryParameters: {'userId': userId},
+    );
+    final data = response.data;
+    return data is Map && data['matched'] == true;
+  }
 
   Future<void> pass(int recipientRowId, int userId) =>
       _dio.post('/suggestions/$recipientRowId/pass', queryParameters: {'userId': userId});
