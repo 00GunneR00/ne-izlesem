@@ -172,6 +172,33 @@ class SocialController extends GetxController {
     suggestionInbox.removeWhere((s) => s.recipientRowId == item.recipientRowId);
   }
 
+  /// Read notifications "Temizle" would remove. Friend requests and incoming
+  /// suggestions still need an answer, so they never count.
+  int get clearableNotificationCount =>
+      suggestionNotifications.where((n) => n.seen).length +
+      groupMatchNotifications.where((n) => n.seen).length;
+
+  /// "Temizle": removes read notifications only; unread ones stay.
+  Future<void> clearReadNotifications() async {
+    final userId = _userId;
+    final count = clearableNotificationCount;
+    if (userId == null || count == 0) return;
+    try {
+      await Future.wait([
+        if (suggestionNotifications.any((n) => n.seen))
+          _suggestionsService.clearReadNotifications(userId),
+        if (groupMatchNotifications.any((n) => n.seen))
+          _groupsService.clearReadMatchNotifications(userId),
+      ]);
+    } catch (_) {
+      Get.snackbar('Olmadı', 'Bildirimler temizlenemedi, tekrar dene.');
+      return;
+    }
+    suggestionNotifications.removeWhere((n) => n.seen);
+    groupMatchNotifications.removeWhere((n) => n.seen);
+    Get.snackbar('Temizlendi', '$count okunmuş bildirim kaldırıldı.');
+  }
+
   /// "Tümünü okundu işaretle" — clears the bell badge. Pending friend
   /// requests stay in the list (they still need accept/decline), they just
   /// stop counting as unread.

@@ -140,7 +140,7 @@ public class SuggestionsController(
         var rows = await db.SuggestionRecipients
             .Include(r => r.Recipient)
             .Include(r => r.Suggestion)!.ThenInclude(s => s!.Title)
-            .Where(r => r.Suggestion!.SenderId == userId && r.Status != SuggestionStatus.Pending)
+            .Where(r => r.Suggestion!.SenderId == userId && r.Status != SuggestionStatus.Pending && !r.DismissedBySender)
             .OrderByDescending(r => r.RespondedAt)
             .Take(30)
             .ToListAsync(ct);
@@ -166,6 +166,17 @@ public class SuggestionsController(
             row.SeenBySender = true;
         }
         await db.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
+    /// <summary>"Temizle": hides the sender's already-read responses; unread ones stay.</summary>
+    [HttpPost("notifications/clear")]
+    public async Task<IActionResult> ClearReadNotifications([FromQuery] int userId, CancellationToken ct)
+    {
+        await db.SuggestionRecipients
+            .Where(r => r.Suggestion!.SenderId == userId && r.Status != SuggestionStatus.Pending
+                        && r.SeenBySender && !r.DismissedBySender)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.DismissedBySender, true), ct);
         return NoContent();
     }
 }

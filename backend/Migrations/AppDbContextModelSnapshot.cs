@@ -233,6 +233,9 @@ namespace Neizlesem.Api.Migrations
                     b.Property<DateTime>("JoinedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("MatchesClearedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime?>("MatchesSeenAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -367,6 +370,9 @@ namespace Neizlesem.Api.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("DismissedBySender")
+                        .HasColumnType("boolean");
 
                     b.Property<int>("RecipientId")
                         .HasColumnType("integer");

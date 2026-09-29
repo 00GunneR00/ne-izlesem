@@ -238,7 +238,9 @@ public class GroupMatchesController(
             .Include(m => m.Group)
             .Join(db.GroupMembers.Where(gm => gm.UserId == userId),
                 m => m.GroupId, gm => gm.GroupId,
-                (m, gm) => new { Match = m, gm.MatchesSeenAt })
+                (m, gm) => new { Match = m, gm.MatchesSeenAt, gm.MatchesClearedAt })
+            // Hide what "Temizle" cleared.
+            .Where(x => x.MatchesClearedAt == null || x.Match.MatchedAt > x.MatchesClearedAt)
             .OrderByDescending(x => x.Match.MatchedAt)
             .Take(30)
             .ToListAsync(ct);
@@ -259,6 +261,20 @@ public class GroupMatchesController(
         await db.GroupMembers
             .Where(m => m.UserId == userId)
             .ExecuteUpdateAsync(s => s.SetProperty(m => m.MatchesSeenAt, now), ct);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// "Temizle": hides the member's already-read match notifications — the
+    /// cut-off is when they last read them, so newer unread ones stay.
+    /// Matches themselves (group page, Takip) are untouched.
+    /// </summary>
+    [HttpPost("matches/clear")]
+    public async Task<IActionResult> ClearReadNotifications([FromQuery] int userId, CancellationToken ct)
+    {
+        await db.GroupMembers
+            .Where(m => m.UserId == userId && m.MatchesSeenAt != null)
+            .ExecuteUpdateAsync(s => s.SetProperty(m => m.MatchesClearedAt, m => m.MatchesSeenAt), ct);
         return NoContent();
     }
 }

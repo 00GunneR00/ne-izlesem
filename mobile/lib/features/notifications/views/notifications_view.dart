@@ -40,6 +40,18 @@ class NotificationsView extends GetView<SocialController> {
                   )
                 : const SizedBox.shrink(),
           ),
+          Obx(
+            () => controller.clearableNotificationCount > 0
+                ? IconButton(
+                    tooltip: 'Okunanları temizle',
+                    icon: const Icon(
+                      Icons.cleaning_services_outlined,
+                      color: AppColors.primary,
+                    ),
+                    onPressed: controller.clearReadNotifications,
+                  )
+                : const SizedBox.shrink(),
+          ),
         ],
       ),
       body: SafeArea(

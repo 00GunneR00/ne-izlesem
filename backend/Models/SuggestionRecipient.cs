@@ -10,4 +10,7 @@ public class SuggestionRecipient
     public SuggestionStatus Status { get; set; } = SuggestionStatus.Pending;
     public DateTime? RespondedAt { get; set; }
     public bool SeenBySender { get; set; }
+
+    /// <summary>Sender cleared this (already read) response from their notifications.</summary>
+    public bool DismissedBySender { get; set; }
 }

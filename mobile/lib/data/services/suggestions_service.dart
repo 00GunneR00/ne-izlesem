@@ -47,4 +47,8 @@ class SuggestionsService {
 
   Future<void> markNotificationsSeen(int userId) =>
       _dio.post('/suggestions/notifications/mark-seen', queryParameters: {'userId': userId});
+
+  /// "Temizle": hides already-read responses; unread ones stay.
+  Future<void> clearReadNotifications(int userId) =>
+      _dio.post('/suggestions/notifications/clear', queryParameters: {'userId': userId});
 }

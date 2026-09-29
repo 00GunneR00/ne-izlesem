@@ -88,4 +88,8 @@ class GroupsService {
 
   Future<void> markMatchesSeen(int userId) =>
       _dio.post('/groups/matches/mark-seen', queryParameters: {'userId': userId});
+
+  /// "Temizle": hides already-read match notifications (matches stay).
+  Future<void> clearReadMatchNotifications(int userId) =>
+      _dio.post('/groups/matches/clear', queryParameters: {'userId': userId});
 }
