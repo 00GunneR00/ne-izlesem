@@ -3,13 +3,15 @@ import 'package:get/get.dart';
 import '../../../core/session/session_service.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/models/library_entry_model.dart';
+import '../../../data/models/plan_model.dart';
 import '../../../data/models/tracking_model.dart';
 import '../../../data/services/library_service.dart';
 import '../../../data/services/tracking_service.dart';
 import '../../plans/controllers/plans_controller.dart';
 
-/// Takip tab: watch plans (via PlansController), a "Bu Hafta" calendar of
-/// plans / new episodes / releases, and shows in progress. Refreshed on every visit.
+/// Takip tab: plans split into Tek Başına / Grupla / Arkadaşlarla (via
+/// PlansController) as a day-by-day agenda, plus new episodes, releases and
+/// shows in progress under Tek Başına. Refreshed on every visit.
 class TakipController extends GetxController {
   final TrackingService _trackingService = TrackingService();
   final LibraryService _libraryService = LibraryService();
@@ -21,6 +23,11 @@ class TakipController extends GetxController {
 
   /// Entry ids with a "Sonraki" request in flight (disables the button).
   final RxSet<int> advancing = <int>{}.obs;
+
+  /// Tek Başına / Grupla / Arkadaşlarla (index = [PlanKind] order).
+  final Rx<PlanKind> selectedKind = PlanKind.solo.obs;
+
+  void selectKind(PlanKind kind) => selectedKind.value = kind;
 
   @override
   void onInit() {

@@ -82,12 +82,20 @@ class TakipView extends GetView<TakipController> {
                     return const Center(child: CircularProgressIndicator());
                   }
                   plans.busy.length; // tracked for the cards' busy state
+                  final kind = controller.selectedKind.value;
+                  bool ofKind(PlanModel p) => p.kind == kind;
+                  // New episodes, releases and "devam et" are personal, so
+                  // they live under Tek Başına.
+                  final personal = kind == PlanKind.solo;
                   final data = controller.tracking.value;
-                  final outcome = plans.needsOutcome;
-                  final upcoming = plans.upcoming;
+                  final outcome = plans.needsOutcome.where(ofKind).toList();
+                  final upcoming = plans.upcoming.where(ofKind).toList();
                   final nextId = upcoming.isEmpty ? null : upcoming.first.id;
                   // Declined plans stay listed (dimmed) so you can change your mind.
-                  final days = _agenda(plans.notStarted, data);
+                  final days = _agenda(
+                    plans.notStarted.where(ofKind).toList(),
+                    personal ? data : null,
+                  );
 
                   return ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
@@ -99,6 +107,8 @@ class TakipView extends GetView<TakipController> {
                       110,
                     ),
                     children: [
+                      _kindTabs(plans),
+                      const SizedBox(height: AppSpacing.lg),
                       for (final p in outcome) ...[
                         PlanOutcomeCard(plan: p),
                         const SizedBox(height: AppSpacing.xs),
@@ -106,7 +116,7 @@ class TakipView extends GetView<TakipController> {
                       if (outcome.isNotEmpty)
                         const SizedBox(height: AppSpacing.md),
                       if (days.isEmpty)
-                        _emptyAgenda()
+                        _emptyAgenda(kind)
                       else
                         for (final day in days.entries) ...[
                           _header(_dayHeader(day.key)),
@@ -121,7 +131,9 @@ class TakipView extends GetView<TakipController> {
                           for (final e in day.value.extras) _extraRow(e),
                           const SizedBox(height: AppSpacing.lg),
                         ],
-                      if (data != null && data.continueWatching.isNotEmpty) ...[
+                      if (personal &&
+                          data != null &&
+                          data.continueWatching.isNotEmpty) ...[
                         _header('İZLEMEYE DEVAM ET'),
                         _continueStrip(data.continueWatching),
                       ],
@@ -246,7 +258,74 @@ class TakipView extends GetView<TakipController> {
     ),
   );
 
-  Widget _emptyAgenda() => Padding(
+  /// Tek Başına | Grupla | Arkadaşlarla — same look as Sosyal's switch.
+  /// Counts are that kind's upcoming plans; a dot marks unanswered invites.
+  Widget _kindTabs(PlansController plans) {
+    Widget tab(PlanKind kind, String label) {
+      final selected = controller.selectedKind.value == kind;
+      final count = plans.notStarted.where((p) => p.kind == kind).length;
+      final hasInvite = plans.pendingInvites.any((p) => p.kind == kind);
+      return Expanded(
+        child: GestureDetector(
+          onTap: () => controller.selectKind(kind),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+            decoration: BoxDecoration(
+              color: selected
+                  ? AppColors.surfaceContainerHigh
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Flexible(
+                  child: Text(
+                    count > 0 ? '$label · $count' : label,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.labelSm.copyWith(
+                      color: selected
+                          ? AppColors.primary
+                          : AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                if (hasInvite) ...[
+                  const SizedBox(width: 4),
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.primaryContainer,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainer,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.outline),
+      ),
+      child: Row(
+        children: [
+          tab(PlanKind.solo, 'Tek Başına'),
+          tab(PlanKind.group, 'Grupla'),
+          tab(PlanKind.friends, 'Arkadaşlarla'),
+        ],
+      ),
+    );
+  }
+
+  Widget _emptyAgenda(PlanKind kind) => Padding(
     padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
     child: Column(
       children: [
@@ -256,15 +335,25 @@ class TakipView extends GetView<TakipController> {
           color: AppColors.onSurfaceVariant,
         ),
         const SizedBox(height: AppSpacing.sm),
-        Text(
-          'Ajandan boş',
-          style: AppTextStyles.headlineMd.copyWith(fontSize: 17),
-        ),
+        Text(switch (kind) {
+          PlanKind.solo => 'Kendine bir plan yap',
+          PlanKind.group => 'Grup planın yok',
+          PlanKind.friends => 'Arkadaşlarla planın yok',
+        }, style: AppTextStyles.headlineMd.copyWith(fontSize: 17)),
         const SizedBox(height: AppSpacing.xs),
         Text(
-          'Bir film ya da dizinin detayından "Planla"ya dokun; tek başına, '
-          'grupla ya da arkadaşlarınla. Takip ettiğin dizilerin yeni bölümleri '
-          've listendeki vizyon tarihleri de burada görünür.',
+          switch (kind) {
+            PlanKind.solo =>
+              'Bir film ya da dizinin detayından "Planla" → Tek başıma. '
+                  'Takip ettiğin dizilerin yeni bölümleri ve listendeki vizyon '
+                  'tarihleri de burada görünür.',
+            PlanKind.group =>
+              'Grup sayfasında en çok oy alan eşleşme için "film gecesi '
+                  'planla"ya dokun ya da detaydan "Planla" → Grup.',
+            PlanKind.friends =>
+              'Bir film ya da dizinin detayından "Planla" → Arkadaş ile '
+                  'arkadaşlarını davet et.',
+          },
           textAlign: TextAlign.center,
           style: AppTextStyles.bodyMd.copyWith(
             fontSize: 13,
