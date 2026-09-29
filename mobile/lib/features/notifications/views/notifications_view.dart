@@ -97,7 +97,7 @@ class NotificationsView extends GetView<SocialController> {
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     for (final p in invites) ...[
-                      PlanCard(plan: p),
+                      PlanCard(plan: p, showDate: true),
                       const SizedBox(height: AppSpacing.xs),
                     ],
                     const SizedBox(height: AppSpacing.lg),

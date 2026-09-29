@@ -22,11 +22,6 @@ class TakipController extends GetxController {
   /// Entry ids with a "Sonraki" request in flight (disables the button).
   final RxSet<int> advancing = <int>{}.obs;
 
-  /// "Bu Hafta" strip: days from today (0 = bugün … 6).
-  final RxInt selectedDay = 0.obs;
-
-  void selectDay(int offset) => selectedDay.value = offset;
-
   @override
   void onInit() {
     super.onInit();
