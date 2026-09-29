@@ -19,6 +19,7 @@ class PlanCard extends StatelessWidget {
     required this.plan,
     this.isNext = false,
     this.showDate = false,
+    this.dimmed = false,
     super.key,
   });
 
@@ -29,6 +30,9 @@ class PlanCard extends StatelessWidget {
 
   /// Show the day under the time (when not listed under a day header).
   final bool showDate;
+
+  /// The user said Gelemem: shown faded, still answerable.
+  final bool dimmed;
 
   @override
   Widget build(BuildContext context) {
@@ -64,79 +68,94 @@ class PlanCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(
-                          width: 48,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _hhmm(plan.scheduledAt),
-                                style: AppTextStyles.headlineMd.copyWith(
-                                  fontSize: 15,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                              if (showDate)
+                    // Declined: content fades, the answer buttons stay bright.
+                    Opacity(
+                      opacity: dimmed ? 0.45 : 1,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            width: 48,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                                 Text(
-                                  formatPlanTime(
-                                    plan.scheduledAt,
-                                  ).split(' ').first,
-                                  style: AppTextStyles.labelSm.copyWith(
-                                    fontSize: 11,
-                                    color: AppColors.onSurfaceVariant,
+                                  _hhmm(plan.scheduledAt),
+                                  style: AppTextStyles.headlineMd.copyWith(
+                                    fontSize: 15,
+                                    color: AppColors.primary,
                                   ),
                                 ),
-                            ],
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () => Get.toNamed(
-                            AppRoutes.detail,
-                            arguments: plan.title,
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(AppRadius.sm),
-                            child: SizedBox(
-                              width: 40,
-                              height: 60,
-                              child: plan.title.posterUrl != null
-                                  ? CachedNetworkImage(
-                                      imageUrl: plan.title.posterUrl!,
-                                      fit: BoxFit.cover,
-                                    )
-                                  : Container(
-                                      color: AppColors.surfaceContainerLow,
+                                if (showDate)
+                                  Text(
+                                    formatPlanTime(
+                                      plan.scheduledAt,
+                                    ).split(' ').first,
+                                    style: AppTextStyles.labelSm.copyWith(
+                                      fontSize: 11,
+                                      color: AppColors.onSurfaceVariant,
                                     ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(child: _details(isCreator)),
-                        if (isCreator && !plan.hasStarted)
-                          SizedBox(
-                            width: 28,
-                            child: PopupMenuButton<String>(
-                              padding: EdgeInsets.zero,
-                              icon: const Icon(
-                                Icons.more_vert,
-                                color: AppColors.onSurfaceVariant,
-                                size: 18,
-                              ),
-                              color: AppColors.surfaceContainerHigh,
-                              onSelected: (_) => _confirmCancel(plans),
-                              itemBuilder: (_) => const [
-                                PopupMenuItem(
-                                  value: 'cancel',
-                                  child: Text('Planı iptal et'),
-                                ),
+                                  ),
                               ],
                             ),
                           ),
-                      ],
+                          GestureDetector(
+                            onTap: () => Get.toNamed(
+                              AppRoutes.detail,
+                              arguments: plan.title,
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                              child: SizedBox(
+                                width: 40,
+                                height: 60,
+                                child: plan.title.posterUrl != null
+                                    ? CachedNetworkImage(
+                                        imageUrl: plan.title.posterUrl!,
+                                        fit: BoxFit.cover,
+                                      )
+                                    : Container(
+                                        color: AppColors.surfaceContainerLow,
+                                      ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(child: _details(isCreator)),
+                          if (isCreator && !plan.hasStarted)
+                            SizedBox(
+                              width: 28,
+                              child: PopupMenuButton<String>(
+                                padding: EdgeInsets.zero,
+                                icon: const Icon(
+                                  Icons.more_vert,
+                                  color: AppColors.onSurfaceVariant,
+                                  size: 18,
+                                ),
+                                color: AppColors.surfaceContainerHigh,
+                                onSelected: (_) => _confirmCancel(plans),
+                                itemBuilder: (_) => const [
+                                  PopupMenuItem(
+                                    value: 'cancel',
+                                    child: Text('Planı iptal et'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
+                    if (dimmed)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          'Gelemem dedin · fikrin değişirse aşağıdan seç',
+                          style: AppTextStyles.labelSm.copyWith(
+                            fontSize: 11,
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
                     if (canRespond) ...[
                       const SizedBox(height: AppSpacing.sm),
                       Row(

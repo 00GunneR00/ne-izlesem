@@ -46,6 +46,10 @@ class PlansController extends GetxController {
 
   PlanModel? get nextPlan => upcoming.isEmpty ? null : upcoming.first;
 
+  /// Every plan that hasn't started, declined ones included (the agenda
+  /// shows those dimmed so the answer can still be changed).
+  List<PlanModel> get notStarted => plans.where((p) => !p.hasStarted).toList();
+
   /// Started plans the user was in on but hasn't answered "Nasıldı?" for.
   List<PlanModel> get needsOutcome => plans
       .where(

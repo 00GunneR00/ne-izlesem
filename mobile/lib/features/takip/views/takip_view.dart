@@ -86,7 +86,8 @@ class TakipView extends GetView<TakipController> {
                   final outcome = plans.needsOutcome;
                   final upcoming = plans.upcoming;
                   final nextId = upcoming.isEmpty ? null : upcoming.first.id;
-                  final days = _agenda(upcoming, data);
+                  // Declined plans stay listed (dimmed) so you can change your mind.
+                  final days = _agenda(plans.notStarted, data);
 
                   return ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
@@ -110,7 +111,11 @@ class TakipView extends GetView<TakipController> {
                         for (final day in days.entries) ...[
                           _header(_dayHeader(day.key)),
                           for (final p in day.value.plans) ...[
-                            PlanCard(plan: p, isNext: p.id == nextId),
+                            PlanCard(
+                              plan: p,
+                              isNext: p.id == nextId,
+                              dimmed: p.myResponse == PlanResponse.notGoing,
+                            ),
                             const SizedBox(height: AppSpacing.xs),
                           ],
                           for (final e in day.value.extras) _extraRow(e),
