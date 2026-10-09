@@ -1,5 +1,7 @@
 # Ne İzlesem
 
+https://github.com/user-attachments/assets/2e6a5854-9b05-426d-aad5-6cf6cf0eeb52
+
 "Bu akşam ne izlesek?" sorusunu tek başına, arkadaşlarınla ya da grupça çözen film ve dizi uygulaması. Kartları kaydırarak beğendiklerini seçersin; uygulama zevkine göre öneri yapar, arkadaş grubunda herkesin "evet" dediği yapımları bulur ve izleme planını takip eder.
 
 Depo iki parçadan oluşur: Flutter ile yazılmış mobil uygulama ve ASP.NET Core ile yazılmış API. Film ve dizi verisi [TMDB](https://www.themoviedb.org/) üzerinden gelir.
